@@ -85,7 +85,7 @@ install:
 script:
   - |
     if [[ ! -z "$CARGO_AUDIT" ]]; then
-      cargo check
+      cargo check --locked
       cargo audit
     elif [[ ! -z "$CARGO_CLIPPY" ]]; then
       cargo clippy

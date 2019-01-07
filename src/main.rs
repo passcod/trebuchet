@@ -1,3 +1,6 @@
+#![forbid(unsafe_code)]
+#![deny(clippy::pedantic)]
+
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
@@ -113,6 +116,8 @@ enum CpuReq {
     Percentage(u8),
 }
 
+#[allow(clippy::cast_possible_truncation)]
+#[allow(clippy::cast_precision_loss)]
 fn kb_from_strum<'de, D>(d: D) -> Result<(usize), D::Error> where D: Deserializer<'de> {
     #[derive(Deserialize)]
     #[serde(untagged)]
@@ -155,6 +160,7 @@ fn percentage_from_string<'de, D>(d: D) -> Result<(u8), D::Error> where D: Deser
     }
 }
 
+#[allow(clippy::trivially_copy_pass_by_ref)]
 fn percentage_to_string<S>(pc: &u8, s: S) -> Result<S::Ok, S::Error> where S: Serializer {
     s.serialize_str(&format!("{}%", pc))
 }
