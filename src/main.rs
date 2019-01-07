@@ -15,7 +15,7 @@ use serde::{Deserialize, Deserializer, Serializer};
 
 #[derive(Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 #[serde(rename_all = "kebab-case")]
-struct Worker {
+pub struct Worker {
     name: String,
     inputs: Vec<DataDef>,
     outputs: Vec<DataDef>,
@@ -24,7 +24,7 @@ struct Worker {
 
 #[derive(Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 #[serde(rename_all = "kebab-case")]
-struct DataDef {
+pub struct DataDef {
     name: String,
     optional: bool,
     datatype: DataType,
@@ -32,7 +32,7 @@ struct DataDef {
 
 #[derive(Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 #[serde(rename_all = "kebab-case")]
-enum DataType {
+pub enum DataType {
     Stream,
     Bool,
     Int,
@@ -44,7 +44,7 @@ enum DataType {
 
 #[derive(Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 #[serde(rename_all = "kebab-case")]
-struct Constraint {
+pub struct Constraint {
     resource: Resource,
     optional: bool, // will be scheduled on matching nodes preferentially, but can run on non-matching nodes
 }
@@ -53,7 +53,7 @@ impl Constraint {
     pub fn required(resource: Resource) -> Self {
         Self { resource, optional: false }
     }
-    
+
     pub fn optional(resource: Resource) -> Self {
         Self { resource, optional: true }
     }
@@ -61,7 +61,7 @@ impl Constraint {
 
 #[derive(Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 #[serde(rename_all = "kebab-case")]
-enum Resource {
+pub enum Resource {
     Memory(MemoryReq), // in kb
     Cpu(CpuReq), // in abstract units
     Gpu(GpuKind), // not the brand or power, more the tech interface available
@@ -72,7 +72,7 @@ enum Resource {
 #[derive(Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 #[serde(rename_all = "kebab-case")]
 #[serde(untagged)]
-enum MemoryReq {
+pub enum MemoryReq {
     #[serde(deserialize_with = "kb_from_strum")]
     Absolute(usize),
 
@@ -84,7 +84,7 @@ enum MemoryReq {
 #[derive(Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 #[serde(rename_all = "kebab-case")]
 #[serde(untagged)]
-enum CpuReq {
+pub enum CpuReq {
     Absolute(usize),
 
     #[serde(deserialize_with = "percentage_from_string")]
@@ -101,7 +101,7 @@ fn kb_from_strum<'de, D>(d: D) -> Result<(usize), D::Error> where D: Deserialize
         Number(usize),
         String(String),
     }
-    
+
     match Strum::deserialize(d)? {
         Strum::Number(u) => Ok(u),
         Strum::String(s) => if s.ends_with(vec!['b', 'k', 'm', 'g', 't'].as_slice()) {
@@ -143,20 +143,20 @@ fn percentage_to_string<S>(pc: &u16, s: S) -> Result<S::Ok, S::Error> where S: S
 
 #[derive(Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 #[serde(rename_all = "kebab-case")]
-enum GpuKind {
+pub enum GpuKind {
     #[serde(rename = "cuda")]
     CUDA,
-    
+
     #[serde(rename = "open-cl")]
     OpenCL,
-    
+
     #[serde(rename = "open-gl")]
     OpenGL,
 }
 
 #[derive(Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 #[serde(rename_all = "kebab-case")]
-enum NetReq {
+pub enum NetReq {
     #[serde(rename = "ip")]
     IP(String), // belong: has this ip; access: can ping this ip
     Name(String), // belong: has this hostname; access: can resolve & ping this hostname
