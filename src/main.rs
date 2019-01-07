@@ -102,7 +102,7 @@ enum MemoryReq {
 
     #[serde(deserialize_with = "percentage_from_string")]
     #[serde(serialize_with = "percentage_to_string")]
-    Percentage(u8),
+    Percentage(u16),
 }
 
 #[derive(Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
@@ -113,7 +113,7 @@ enum CpuReq {
 
     #[serde(deserialize_with = "percentage_from_string")]
     #[serde(serialize_with = "percentage_to_string")]
-    Percentage(u8),
+    Percentage(u16),
 }
 
 #[allow(clippy::cast_possible_truncation)]
@@ -147,13 +147,13 @@ fn kb_from_strum<'de, D>(d: D) -> Result<(usize), D::Error> where D: Deserialize
     }
 }
 
-fn percentage_from_string<'de, D>(d: D) -> Result<(u8), D::Error> where D: Deserializer<'de> {
+fn percentage_from_string<'de, D>(d: D) -> Result<(u16), D::Error> where D: Deserializer<'de> {
     let pc = String::deserialize(d)?;
     if pc.ends_with('%') {
         let n = pc.len() - 1;
         let num = &pc[0..n];
-        num.parse::<u8>().map_err(|_err| {
-            serde::de::Error::invalid_value(serde::de::Unexpected::Str(num), &"a string representation of a u8")
+        num.parse::<u16>().map_err(|_err| {
+            serde::de::Error::invalid_value(serde::de::Unexpected::Str(num), &"a string representation of a u16")
         })
     } else {
         Err(serde::de::Error::invalid_type(serde::de::Unexpected::Str(&pc), &"a percentage"))
@@ -161,7 +161,7 @@ fn percentage_from_string<'de, D>(d: D) -> Result<(u8), D::Error> where D: Deser
 }
 
 #[allow(clippy::trivially_copy_pass_by_ref)]
-fn percentage_to_string<S>(pc: &u8, s: S) -> Result<S::Ok, S::Error> where S: Serializer {
+fn percentage_to_string<S>(pc: &u16, s: S) -> Result<S::Ok, S::Error> where S: Serializer {
     s.serialize_str(&format!("{}%", pc))
 }
 
