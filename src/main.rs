@@ -4,38 +4,14 @@
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
-#[macro_use]
+#[cfg_attr(test, macro_use)]
 extern crate serde_json;
-
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use std::fmt::Debug;
 
 fn main() {
     println!("Hello, world!");
-    
-    check(Constraint::required(Resource::Memory(MemoryReq::Absolute(128))));
-    check(Constraint::optional(Resource::Memory(MemoryReq::Percentage(50))));
-    check(Constraint::required(Resource::Cpu(CpuReq::Percentage(5))));
-    check(Constraint::required(Resource::NetworkAccess(NetReq::Subnet("10.0.0.0/8".into()))));
-    check(Constraint::required(Resource::NetworkBelong(NetReq::IP("172.0.2.81".into()))));
-    
-    uncheck::<Constraint>(r#"{"optional":false,"resource":{"memory":200}}"#);
-    uncheck::<Constraint>(r#"{"optional":false,"resource":{"memory":"64b"}}"#);
-    uncheck::<Constraint>(r#"{"optional":false,"resource":{"memory":"157575b"}}"#);
-    uncheck::<Constraint>(r#"{"optional":false,"resource":{"memory":"35m"}}"#);
-    uncheck::<Constraint>(r#"{"optional":false,"resource":{"memory":"2%"}}"#);
-    
-    uncheck::<Constraint>(r#"{"optional":true,"resource":{"network-access":{"subnet":"10.0.100.0/24"}}}"#);
 }
 
-fn check<T: Debug + Serialize>(strct: T) {
-    println!("-> {:?}\n== {}\n\n", strct, json!(strct));
-}
-
-fn uncheck<T: Debug + Deserialize<'static>>(unstr: &'static str) {
-    let strct: T = serde_json::from_str(unstr).unwrap();
-    println!("-> {}\n== {:?}\n\n", unstr, strct);
-}
+use serde::{Deserialize, Deserializer, Serializer};
 
 #[derive(Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 #[serde(rename_all = "kebab-case")]
@@ -168,6 +144,7 @@ fn percentage_to_string<S>(pc: &u16, s: S) -> Result<S::Ok, S::Error> where S: S
 #[derive(Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 #[serde(rename_all = "kebab-case")]
 enum GpuKind {
+    #[serde(rename = "cuda")]
     CUDA,
     
     #[serde(rename = "open-cl")]
@@ -184,4 +161,100 @@ enum NetReq {
     IP(String), // belong: has this ip; access: can ping this ip
     Name(String), // belong: has this hostname; access: can resolve & ping this hostname
     Subnet(String), // belong: has ip within this subnet; access: can route to this subnet
+}
+
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    macro_rules! test_assert_eq {
+        ($name:ident, $left:expr, $right:expr) => {
+            #[test]
+            fn $name() {
+                assert_eq!($left, $right);
+            }
+        }
+    }
+
+    test_assert_eq!(
+        encode_absolute_number,
+        json!(Constraint::required(Resource::Memory(MemoryReq::Absolute(128)))).to_string(),
+        r#"{"optional":false,"resource":{"memory":128}}"#
+    );
+    test_assert_eq!(
+        encode_percentage_string,
+        json!(Constraint::optional(Resource::Memory(MemoryReq::Percentage(50)))).to_string(),
+        r#"{"optional":true,"resource":{"memory":"50%"}}"#
+    );
+    test_assert_eq!(
+        encode_percentage_gt_100,
+        json!(Constraint::required(Resource::Cpu(CpuReq::Percentage(153)))).to_string(),
+        r#"{"optional":false,"resource":{"cpu":"153%"}}"#
+    );
+    test_assert_eq!(
+        encode_keys_kebab,
+        json!(Constraint::required(Resource::NetworkAccess(NetReq::Subnet("10.0.0.0/8".into())))).to_string(),
+        r#"{"optional":false,"resource":{"network-access":{"subnet":"10.0.0.0/8"}}}"#
+    );
+    test_assert_eq!(
+        encode_ip_lowercase,
+        json!(Constraint::required(Resource::NetworkBelong(NetReq::IP("172.0.2.81".into())))).to_string(),
+        r#"{"optional":false,"resource":{"network-belong":{"ip":"172.0.2.81"}}}"#
+    );
+    test_assert_eq!(
+        encode_untagged_enum,
+        json!(Constraint::required(Resource::Gpu(GpuKind::OpenCL))).to_string(),
+        r#"{"optional":false,"resource":{"gpu":"open-cl"}}"#
+    );
+    test_assert_eq!(
+        encode_opengl_proper_kebabing,
+        json!(Constraint::required(Resource::Gpu(GpuKind::OpenGL))).to_string(),
+        r#"{"optional":false,"resource":{"gpu":"open-gl"}}"#
+    );
+    test_assert_eq!(
+        encode_cuda_lowercase,
+        json!(Constraint::required(Resource::Gpu(GpuKind::CUDA))).to_string(),
+        r#"{"optional":false,"resource":{"gpu":"cuda"}}"#
+    );
+
+    fn decode<'s, T: Deserialize<'s>>(json: &'s str) -> T {
+        serde_json::from_str(json).unwrap()
+    }
+
+    test_assert_eq!(
+        decode_absolute_from_number,
+        decode::<Constraint>(r#"{"optional":false,"resource":{"memory":200}}"#),
+        Constraint::required(Resource::Memory(MemoryReq::Absolute(200)))
+    );
+    test_assert_eq!(
+        decode_minimum_1kb_bound,
+        decode::<Constraint>(r#"{"optional":false,"resource":{"memory":"64b"}}"#),
+        Constraint::required(Resource::Memory(MemoryReq::Absolute(1)))
+    );
+    test_assert_eq!(
+        decode_upscale_bytes_to_kb,
+        decode::<Constraint>(r#"{"optional":false,"resource":{"memory":"157575b"}}"#),
+        Constraint::required(Resource::Memory(MemoryReq::Absolute(153)))
+    );
+    test_assert_eq!(
+        decode_downscale_mb,
+        decode::<Constraint>(r#"{"optional":false,"resource":{"memory":"35m"}}"#),
+        Constraint::required(Resource::Memory(MemoryReq::Absolute(35840)))
+    );
+    test_assert_eq!(
+        decode_string_to_percent,
+        decode::<Constraint>(r#"{"optional":false,"resource":{"memory":"2%"}}"#),
+        Constraint::required(Resource::Memory(MemoryReq::Percentage(2)))
+    );
+    test_assert_eq!(
+        decode_kebab,
+        decode::<Constraint>(r#"{"optional":true,"resource":{"network-access":{"subnet":"10.0.100.0/24"}}}"#),
+        Constraint::optional(Resource::NetworkAccess(NetReq::Subnet("10.0.100.0/24".into())))
+    );
+    test_assert_eq!(
+        decode_untagged_enum,
+        decode::<Constraint>(r#"{"optional":true,"resource":{"gpu":"open-cl"}}"#),
+        Constraint::optional(Resource::Gpu(GpuKind::OpenCL))
+    );
 }
