@@ -1,8 +1,16 @@
 [package]
-name = "jobthing"
+name = "armstrong"
 version = "0.1.0"
 authors = ["Félix Saparelli <felix@passcod.name>"]
+license = "Artistic-2.0"
+repository = "https://github.com/passcod/armstrong"
+# readme = "README.md"
+
 edition = "2018"
+
+[badges]
+travis-ci = { repository = "passcod/armstrong" }
+maintenance = { status = "actively-developed" }
 
 [dependencies]
 serde = "1.0.84"

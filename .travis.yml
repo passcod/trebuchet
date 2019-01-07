@@ -1,0 +1,109 @@
+dist: xenial
+language: rust
+cache: cargo
+
+cache:
+  - directories:
+    - $HOME/.cargo
+    - target/debug/deps
+    - target/$TARGET/debug/deps
+before_cache:
+  # Travis can't cache files that are not readable by "others"
+  - chmod -R a+r $HOME/.cargo
+
+addons:
+  apt:
+    packages:
+      - fakeroot
+
+env:
+  global:
+    - PROJECT_NAME=armstrong
+
+matrix:
+  fast_finish: true
+  include:
+
+    # Audit only
+    - env: CARGO_AUDIT=1
+
+    # Default test+release versions
+    - os: windows
+      env: TARGET=x86_64-pc-windows-msvc
+    - os: osx
+      env: TARGET=x86_64-apple-darwin
+    - os: linux
+      env: TARGET=x86_64-unknown-linux-gnu
+
+    # Extra targets, also released
+    - os: linux
+      env: TARGET=x86_64-unknown-linux-musl
+    - os: linux
+      env: TARGET=i686-unknown-linux-musl
+
+    # Clippy only
+    - env: CARGO_CLIPPY=1
+
+    # Non-critical, best-effort
+    - os: windows
+      rust: nightly
+      env: TARGET=x86_64-pc-windows-msvc
+    - os: linux
+      rust: nightly
+      env: TARGET=x86_64-unknown-linux-gnu
+    - os: osx
+      rust: nightly
+      env: TARGET=x86_64-apple-darwin
+    - os: windows
+      env: TARGET=x86_64-pc-windows-gnu
+
+  allow_failures:
+    - rust: nightly
+    - env: CARGO_CLIPPY=1
+    - env: TARGET=x86_64-pc-windows-gnu
+
+install:
+  - set -e
+  - |
+    if [ $TRAVIS_OS_NAME = windows ]; then
+        choco install windows-sdk-10.0
+    fi
+  # --debug for faster build at the minimal expense of runtime speed
+  - |
+    if [[ ! -z "$CARGO_AUDIT" ]]; then
+      which cargo-audit || cargo install --debug cargo-audit
+    fi
+  - |
+    if [[ ! -z "$CARGO_CLIPPY" ]]; then
+      rustup component add clippy
+    fi
+  - |
+    if [[ ! -z "$TARGET" ]]; then
+      rustup target add $TARGET || true
+    fi
+
+script:
+  - |
+    if [[ ! -z "$CARGO_AUDIT" ]]; then
+      cargo check
+      cargo audit
+    elif [[ ! -z "$CARGO_CLIPPY" ]]; then
+      cargo clippy
+    else
+      cargo test --target $TARGET
+    fi
+
+after_script: set +e
+
+before_deploy: ./.package $PROJECT_NAME $TRAVIS_TAG $TARGET
+deploy:
+  provider: releases
+  api_key:
+    secure: TODO
+  file_glob: true
+  file: ${PROJECT_NAME}-${TRAVIS_TAG}-${TARGET}.*
+  skip_cleanup: true
+  on:
+    repo: passcod/armstrong
+    tags: true
+    rust: stable

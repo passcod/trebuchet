@@ -1,16 +1,16 @@
 [[package]]
-name = "itoa"
-version = "0.4.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-
-[[package]]
-name = "jobthing"
+name = "armstrong"
 version = "0.1.0"
 dependencies = [
  "serde 1.0.84 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.84 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.34 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
+
+[[package]]
+name = "itoa"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "proc-macro2"
