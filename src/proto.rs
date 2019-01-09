@@ -1,6 +1,6 @@
 use serde::{Deserialize, Deserializer, Serializer};
 
-#[derive(Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
+#[derive(Debug, Deserialize, PartialEq, PartialOrd, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct Worker {
     pub name: String,
@@ -10,6 +10,7 @@ pub struct Worker {
 }
 
 impl Worker {
+    #[allow(clippy::new_ret_no_self)]
     pub fn new(
         name: &str,
         inputs: Vec<DataDef>,
@@ -46,6 +47,7 @@ pub struct DataDef {
 }
 
 impl DataDef {
+    #[allow(clippy::new_ret_no_self)]
     pub fn new(name: &str, datatype: DataType, optional: bool) -> Result<Self, CreateError> {
         if name.is_empty() {
             return Err(CreateError::EmptyDataName);
@@ -79,7 +81,7 @@ pub enum DataType {
     Json,
 }
 
-#[derive(Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
+#[derive(Debug, Deserialize, PartialEq, PartialOrd, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct Constraint {
     pub resource: Resource,
@@ -102,7 +104,7 @@ impl Constraint {
     }
 }
 
-#[derive(Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
+#[derive(Debug, Deserialize, PartialEq, PartialOrd, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum Resource {
     Memory(MemoryReq), // in kb
@@ -112,7 +114,7 @@ pub enum Resource {
     NetworkAccess(NetReq),
 }
 
-#[derive(Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
+#[derive(Debug, Deserialize, PartialEq, PartialOrd, Serialize)]
 #[serde(rename_all = "kebab-case")]
 #[serde(untagged)]
 pub enum MemoryReq {
@@ -121,22 +123,28 @@ pub enum MemoryReq {
 
     #[serde(deserialize_with = "percentage_from_string")]
     #[serde(serialize_with = "percentage_to_string")]
-    Percentage(u16),
+    Percentage(f32),
 }
 
-#[derive(Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
+#[derive(Debug, Deserialize, PartialEq, PartialOrd, Serialize)]
 #[serde(rename_all = "kebab-case")]
-#[serde(untagged)]
 pub enum CpuReq {
-    Absolute(usize),
-
+    /// In percentage, how much of the system load (1 minute average) is a job
+    /// expected to require. Jobs without this constraint will just run whenever
+    /// and it will be the responsibility of operators to figure out balancing,
+    /// while this may be a little too easy on the system (due to how load is
+    /// calculated). A system's load can go over 100%, but Armstrong will not
+    /// deliberately allocate jobs in a way that would do that.
+    ///
+    /// This constraint is limited to the range `(0, 100)` for practical reasons
+    /// derived from above: 0% doesn't apply a constraint, and 100% never runs.
     #[serde(deserialize_with = "percentage_from_string")]
     #[serde(serialize_with = "percentage_to_string")]
-    Percentage(u16),
+    Load(f32),
 }
 
 #[allow(clippy::cast_possible_truncation)]
-#[allow(clippy::cast_precision_loss)]
+// #[allow(clippy::cast_precision_loss)]
 #[allow(clippy::cast_sign_loss)]
 fn kb_from_strum<'de, D>(d: D) -> Result<(usize), D::Error>
 where
@@ -155,19 +163,19 @@ where
             if s.ends_with(vec!['b', 'k', 'm', 'g', 't'].as_slice()) {
                 let n = s.len() - 1;
                 let (num, unit) = s.split_at(n);
-                num.parse::<usize>()
+                num.parse::<f32>()
                     .map_err(|_err| {
                         serde::de::Error::invalid_value(
                             serde::de::Unexpected::Str(num),
-                            &"a string representation of a usize",
+                            &"a string representation of a number",
                         )
                     })
                     .map(|n| match unit {
-                        "b" => ((n as f64) / 1024.0).max(1.0) as usize,
-                        "k" => n,
-                        "m" => n * 1024,
-                        "g" => n * 1024 * 1024,
-                        "t" => n * 1024 * 1024 * 1024,
+                        "b" => (n / 1024_f32).max(1_f32) as usize,
+                        "k" => (n) as usize,
+                        "m" => (n * 1024_f32) as usize,
+                        "g" => (n * 1024_f32.powi(2)) as usize,
+                        "t" => (n * 1024_f32.powi(3)) as usize,
                         _ => unreachable!(),
                     })
             } else {
@@ -180,7 +188,7 @@ where
     }
 }
 
-fn percentage_from_string<'de, D>(d: D) -> Result<(u16), D::Error>
+fn percentage_from_string<'de, D>(d: D) -> Result<(f32), D::Error>
 where
     D: Deserializer<'de>,
 {
@@ -188,10 +196,10 @@ where
     if pc.ends_with('%') {
         let n = pc.len() - 1;
         let num = &pc[0..n];
-        num.parse::<u16>().map_err(|_err| {
+        num.parse::<f32>().map_err(|_err| {
             serde::de::Error::invalid_value(
                 serde::de::Unexpected::Str(num),
-                &"a string representation of a u16",
+                &"a string representation of a number",
             )
         })
     } else {
@@ -203,7 +211,7 @@ where
 }
 
 #[allow(clippy::trivially_copy_pass_by_ref)]
-fn percentage_to_string<S>(pc: &u16, s: S) -> Result<S::Ok, S::Error>
+fn percentage_to_string<S>(pc: &f32, s: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
@@ -279,12 +287,12 @@ mod test {
             vec![DataDef::required("created", DataType::Bool).unwrap()],
             vec![
                 Constraint::required(Resource::Memory(MemoryReq::Absolute(50_000))),
-                Constraint::optional(Resource::Cpu(CpuReq::Percentage(10)))
+                Constraint::optional(Resource::Cpu(CpuReq::Load(10.0)))
             ]
         )
         .unwrap())
         .to_string(),
-        r#"{"constraints":[{"optional":false,"resource":{"memory":50000}},{"optional":true,"resource":{"cpu":"10%"}}],"inputs":[{"datatype":"string","name":"name","optional":false},{"datatype":"stream","name":"events","optional":false},{"datatype":"bool","name":"running","optional":true}],"name":"bare","outputs":[{"datatype":"bool","name":"created","optional":false}]}"#
+        r#"{"constraints":[{"optional":false,"resource":{"memory":50000}},{"optional":true,"resource":{"cpu":{"load":"10%"}}}],"inputs":[{"datatype":"string","name":"name","optional":false},{"datatype":"stream","name":"events","optional":false},{"datatype":"bool","name":"running","optional":true}],"name":"bare","outputs":[{"datatype":"bool","name":"created","optional":false}]}"#
     );
 
     test_assert_eq!(
@@ -298,15 +306,15 @@ mod test {
     test_assert_eq!(
         encode_percentage_string,
         json!(Constraint::optional(Resource::Memory(
-            MemoryReq::Percentage(50)
+            MemoryReq::Percentage(50.0)
         )))
         .to_string(),
         r#"{"optional":true,"resource":{"memory":"50%"}}"#
     );
     test_assert_eq!(
         encode_percentage_gt_100,
-        json!(Constraint::required(Resource::Cpu(CpuReq::Percentage(153)))).to_string(),
-        r#"{"optional":false,"resource":{"cpu":"153%"}}"#
+        json!(Constraint::required(Resource::Cpu(CpuReq::Load(15.3)))).to_string(),
+        r#"{"optional":false,"resource":{"cpu":{"load":"15.3%"}}}"#
     );
     test_assert_eq!(
         encode_keys_kebab,
@@ -366,8 +374,8 @@ mod test {
     );
     test_assert_eq!(
         decode_string_to_percent,
-        decode::<Constraint>(r#"{"optional":false,"resource":{"memory":"2%"}}"#),
-        Constraint::required(Resource::Memory(MemoryReq::Percentage(2)))
+        decode::<Constraint>(r#"{"optional":false,"resource":{"memory":"2.5%"}}"#),
+        Constraint::required(Resource::Memory(MemoryReq::Percentage(2.5)))
     );
     test_assert_eq!(
         decode_kebab,
