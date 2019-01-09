@@ -46,6 +46,10 @@ impl System {
             .map(|load| 100_f32 - (load.one / num_cpus::get() as f32) * 100_f32)
     }
 
+    pub fn hostname(&self) -> Option<String> {
+        get_hostname()
+    }
+
     #[allow(clippy::expect_fun_call)]
     pub fn belonging_ips(&self) -> IoResult<Vec<IpNet>> {
         let mut nets = Vec::new();
@@ -73,7 +77,7 @@ impl System {
             Resource::Cpu(CpuReq::Load(available)) => &self.available_load()? >= available,
             Resource::NetworkBelong(NetReq::IP(ip)) => self.belonging_ips()?.contains(ip),
             Resource::NetworkBelong(NetReq::Name(host)) => {
-                get_hostname().map_or(false, |name| host == &name)
+                self.hostname().map_or(false, |name| host == &name)
             }
             Resource::NetworkBelong(NetReq::Subnet(sub)) => {
                 self.belonging_ips()?.iter().any(|ip| sub.contains(ip))
@@ -123,7 +127,7 @@ fn main() {
     );
     println!("IPs: {:?}", sys.belonging_ips().unwrap());
     println!("Inverse load: {:?}", sys.available_load().unwrap());
-    println!("Hostname: {:?}", get_hostname());
+    println!("Hostname: {:?}", sys.hostname());
 
     let memcon1 = Resource::Memory(MemoryReq::Absolute(10_240));
     println!(
