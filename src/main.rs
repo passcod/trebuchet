@@ -4,6 +4,8 @@
 #![allow(clippy::non_ascii_literal)]
 
 #[macro_use]
+extern crate log;
+#[macro_use]
 extern crate serde_derive;
 #[cfg_attr(test, macro_use)]
 extern crate serde_json;
@@ -78,6 +80,36 @@ impl System {
             }
             _ => false,
         })
+    }
+
+    /// Returns a pass and a score for this system based on the given constraints.
+    ///
+    /// The score is calculated by assigning one point to every constraint that resolves as a pass.
+    /// If a single required constraint fails, the entire thing resolves to `None` aka "cannot run
+    /// this set of constraints". But if all required constraints pass and some optional constraints
+    /// fail, the score will be _higher_ for systems that fulfill more constraints than others.
+    ///
+    /// Constraint checks that error out will be logged but resolve as a fail instead of aborting.
+    pub fn check_constraints(&self, cons: &[Constraint]) -> Option<usize> {
+        let mut score = 0;
+
+        for con in cons {
+            let ok = match self.check_resource(&con.resource) {
+                Ok(pass) => pass,
+                Err(err) => {
+                    error!("Failed to run check for {:?}: {:?}", con.resource, err);
+                    false
+                }
+            };
+
+            if ok {
+                score += 1;
+            } else if !con.optional {
+                return None;
+            }
+        }
+
+        Some(score)
     }
 }
 
@@ -172,4 +204,28 @@ fn main() {
         namecon2,
         sys.check_resource(&namecon2.resource).unwrap()
     );
+
+    let cons1 = vec![
+        Constraint::required(Resource::NetworkBelong(NetReq::Name("kaydel-ko".into()))),
+        Constraint::required(Resource::NetworkBelong(NetReq::Subnet(
+            "10.0.100.0/24".parse().unwrap(),
+        ))),
+    ];
+    println!("\n{:?}\nScores: {:?}", cons1, sys.check_constraints(&cons1));
+
+    let cons2 = vec![
+        Constraint::required(Resource::NetworkBelong(NetReq::Name("kare-kun".into()))),
+        Constraint::required(Resource::NetworkBelong(NetReq::Subnet(
+            "10.0.100.0/24".parse().unwrap(),
+        ))),
+    ];
+    println!("\n{:?}\nScores: {:?}", cons2, sys.check_constraints(&cons2));
+
+    let cons3 = vec![
+        Constraint::optional(Resource::NetworkBelong(NetReq::Name("kare-kun".into()))),
+        Constraint::required(Resource::NetworkBelong(NetReq::Subnet(
+            "10.0.100.0/24".parse().unwrap(),
+        ))),
+    ];
+    println!("\n{:?}\nScores: {:?}", cons3, sys.check_constraints(&cons3));
 }
