@@ -1,3 +1,4 @@
+use ipnet::IpNet;
 use serde::{Deserialize, Deserializer, Serializer};
 
 #[derive(Debug, Deserialize, PartialEq, PartialOrd, Serialize)]
@@ -234,10 +235,58 @@ pub enum GpuKind {
 #[derive(Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum NetReq {
+    /// belong: has this ip; access: can ping this ip
     #[serde(rename = "ip")]
-    IP(String), // belong: has this ip; access: can ping this ip
-    Name(String), // belong: has this hostname; access: can resolve & ping this hostname
-    Subnet(String), // belong: has ip within this subnet; access: can route to this subnet
+    #[serde(deserialize_with = "ip_from_string")]
+    #[serde(serialize_with = "ipnet_to_string")]
+    IP(IpNet),
+
+    /// belong: has this hostname; access: can resolve & ping this hostname
+    Name(String),
+
+    /// belong: has ip within this subnet; access: can route to this subnet
+    #[serde(deserialize_with = "subnet_from_string")]
+    #[serde(serialize_with = "ipnet_to_string")]
+    Subnet(IpNet),
+}
+
+fn ip_from_string<'de, D>(d: D) -> Result<(IpNet), D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let ip = String::deserialize(d)?;
+
+    let auto = ip.parse::<IpNet>();
+    let v6 = format!("{}/128", ip).parse::<IpNet>();
+    let v4 = format!("{}/32", ip).parse::<IpNet>();
+
+    auto.or(v6).or(v4).map_err(|_err| {
+        serde::de::Error::invalid_value(
+            serde::de::Unexpected::Str(&ip),
+            &"a string representation of an ip",
+        )
+    })
+}
+
+fn subnet_from_string<'de, D>(d: D) -> Result<(IpNet), D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let sub = String::deserialize(d)?;
+
+    sub.parse::<IpNet>().map_err(|_err| {
+        serde::de::Error::invalid_value(
+            serde::de::Unexpected::Str(&sub),
+            &"a string representation of a subnet",
+        )
+    })
+}
+
+fn ipnet_to_string<S>(ip: &IpNet, s: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    s.serialize_str(&format!("{}", ip))
 }
 
 #[cfg(test)]
@@ -299,16 +348,14 @@ mod test {
         encode_absolute_number,
         json!(Constraint::required(Resource::Memory(MemoryReq::Absolute(
             128
-        ))))
-        .to_string(),
+        )))).to_string(),
         r#"{"optional":false,"resource":{"memory":128}}"#
     );
     test_assert_eq!(
         encode_percentage_string,
         json!(Constraint::optional(Resource::Memory(
             MemoryReq::Percentage(50.0)
-        )))
-        .to_string(),
+        ))).to_string(),
         r#"{"optional":true,"resource":{"memory":"50%"}}"#
     );
     test_assert_eq!(
@@ -319,18 +366,16 @@ mod test {
     test_assert_eq!(
         encode_keys_kebab,
         json!(Constraint::required(Resource::NetworkAccess(
-            NetReq::Subnet("10.0.0.0/8".into())
-        )))
-        .to_string(),
+            NetReq::Subnet("10.0.0.0/8".parse::<IpNet>().unwrap())
+        ))).to_string(),
         r#"{"optional":false,"resource":{"network-access":{"subnet":"10.0.0.0/8"}}}"#
     );
     test_assert_eq!(
         encode_ip_lowercase,
         json!(Constraint::required(Resource::NetworkBelong(NetReq::IP(
-            "172.0.2.81".into()
-        ))))
-        .to_string(),
-        r#"{"optional":false,"resource":{"network-belong":{"ip":"172.0.2.81"}}}"#
+            "172.0.2.81/32".parse::<IpNet>().unwrap()
+        )))).to_string(),
+        r#"{"optional":false,"resource":{"network-belong":{"ip":"172.0.2.81/32"}}}"#
     );
     test_assert_eq!(
         encode_untagged_enum,
@@ -383,7 +428,23 @@ mod test {
             r#"{"optional":true,"resource":{"network-access":{"subnet":"10.0.100.0/24"}}}"#
         ),
         Constraint::optional(Resource::NetworkAccess(NetReq::Subnet(
-            "10.0.100.0/24".into()
+            "10.0.100.0/24".parse::<IpNet>().unwrap()
+        )))
+    );
+    test_assert_eq!(
+        decode_netless_ipv4,
+        decode::<Constraint>(
+            r#"{"optional":true,"resource":{"network-access":{"ip":"192.0.2.123"}}}"#
+        ),
+        Constraint::optional(Resource::NetworkAccess(NetReq::IP(
+            "192.0.2.123/32".parse::<IpNet>().unwrap()
+        )))
+    );
+    test_assert_eq!(
+        decode_netless_ipv6,
+        decode::<Constraint>(r#"{"optional":true,"resource":{"network-access":{"ip":"2038::1"}}}"#),
+        Constraint::optional(Resource::NetworkAccess(NetReq::IP(
+            "2038::1/128".parse::<IpNet>().unwrap()
         )))
     );
     test_assert_eq!(
