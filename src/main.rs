@@ -93,38 +93,35 @@ fn main() {
     println!("Inverse load: {:?}", sys.available_load().unwrap());
     println!("Hostname: {:?}", get_hostname());
 
-    let memcon1 =
-        proto::Constraint::required(proto::Resource::Memory(proto::MemoryReq::Absolute(10_240)));
+    let memcon1 = Constraint::required(Resource::Memory(MemoryReq::Absolute(10_240)));
     println!(
         "\n{:?}\nPasses: {}",
         memcon1,
         sys.check_resource(&memcon1.resource).unwrap()
     );
 
-    let memcon2 = proto::Constraint::required(proto::Resource::Memory(proto::MemoryReq::Absolute(
-        102_400_000,
-    )));
+    let memcon2 = Constraint::required(Resource::Memory(MemoryReq::Absolute(102_400_000)));
     println!(
         "\n{:?}\nPasses: {}",
         memcon2,
         sys.check_resource(&memcon2.resource).unwrap()
     );
 
-    let cpucon1 = proto::Constraint::required(proto::Resource::Cpu(proto::CpuReq::Load(10_f32)));
+    let cpucon1 = Constraint::required(Resource::Cpu(CpuReq::Load(10_f32)));
     println!(
         "\n{:?}\nPasses: {}",
         cpucon1,
         sys.check_resource(&cpucon1.resource).unwrap()
     );
 
-    let cpucon2 = proto::Constraint::required(proto::Resource::Cpu(proto::CpuReq::Load(89_f32)));
+    let cpucon2 = Constraint::required(Resource::Cpu(CpuReq::Load(89_f32)));
     println!(
         "\n{:?}\nPasses: {}",
         cpucon2,
         sys.check_resource(&cpucon2.resource).unwrap()
     );
 
-    let ipcon1 = proto::Constraint::required(proto::Resource::NetworkBelong(proto::NetReq::IP(
+    let ipcon1 = Constraint::required(Resource::NetworkBelong(NetReq::IP(
         "::1/128".parse().unwrap(),
     )));
     println!(
@@ -133,7 +130,7 @@ fn main() {
         sys.check_resource(&ipcon1.resource).unwrap()
     );
 
-    let ipcon2 = proto::Constraint::required(proto::Resource::NetworkBelong(proto::NetReq::IP(
+    let ipcon2 = Constraint::required(Resource::NetworkBelong(NetReq::IP(
         "2038::1/128".parse().unwrap(),
     )));
     println!(
@@ -142,18 +139,18 @@ fn main() {
         sys.check_resource(&ipcon2.resource).unwrap()
     );
 
-    let subcon1 = proto::Constraint::required(proto::Resource::NetworkBelong(
-        proto::NetReq::Subnet("10.0.100.0/24".parse().unwrap()),
-    ));
+    let subcon1 = Constraint::required(Resource::NetworkBelong(NetReq::Subnet(
+        "10.0.100.0/24".parse().unwrap(),
+    )));
     println!(
         "\n{:?}\nPasses: {}",
         subcon1,
         sys.check_resource(&subcon1.resource).unwrap()
     );
 
-    let subcon2 = proto::Constraint::required(proto::Resource::NetworkBelong(
-        proto::NetReq::Subnet("192.0.2.0/24".parse().unwrap()),
-    ));
+    let subcon2 = Constraint::required(Resource::NetworkBelong(NetReq::Subnet(
+        "192.0.2.0/24".parse().unwrap(),
+    )));
     println!(
         "\n{:?}\nPasses: {}",
         subcon2,
