@@ -3,6 +3,7 @@
 #![allow(clippy::stutter)]
 #![allow(clippy::non_ascii_literal)]
 
+#[cfg(feature = "gpu")]
 #[macro_use]
 extern crate lazy_static;
 #[macro_use]
@@ -17,6 +18,8 @@ use hostname::get_hostname;
 use ipnet::IpNet;
 use std::io::Result as IoResult;
 use systemstat::Platform;
+
+mod gpu;
 
 pub mod proto;
 
@@ -65,20 +68,14 @@ impl System {
     ///
     /// TODO: Actually check. (How?!)
     pub fn has_opengl(&self) -> bool {
-        true
+        gpu::has_opengl()
     }
 
     /// Checks OpenCL availability by listing the system's OpenCL platforms.
     ///
     /// Only checks once per running instance.
     pub fn has_opencl(&self) -> bool {
-        lazy_static! {
-        static ref OCL_AVAILABLE: Option<bool> = ocl_core::get_platform_ids()
-            .ok()
-            .map(|list| !list.is_empty());
-        }
-
-        OCL_AVAILABLE.unwrap_or(false)
+        gpu::has_opencl()
     }
 
     /// Retrieves all IPs associated to all interfaces of the system.

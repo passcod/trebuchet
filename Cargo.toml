@@ -12,14 +12,21 @@ edition = "2018"
 travis-ci = { repository = "passcod/armstrong" }
 maintenance = { status = "actively-developed" }
 
+[features]
+default = []
+gpu = ["ocl-core"]
+
 [dependencies]
 hostname = "0.1.5"
 ipnet = "2.0.0"
 lazy_static = "1.2.0"
 log = "0.4.6"
 num_cpus = "1.9.0"
-ocl-core = "0.10.0"
 serde = "1.0.84"
 serde_derive = "1.0.84"
 serde_json = "1.0.34"
 systemstat = "0.1.3"
+
+[dependencies.ocl-core]
+version = "0.10.0"
+optional = true
