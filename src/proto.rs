@@ -3,10 +3,10 @@ use serde::{Deserialize, Deserializer, Serializer};
 #[derive(Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct Worker {
-    name: String,
-    inputs: Vec<DataDef>,
-    outputs: Vec<DataDef>,
-    constraints: Vec<Constraint>,
+    pub name: String,
+    pub inputs: Vec<DataDef>,
+    pub outputs: Vec<DataDef>,
+    pub constraints: Vec<Constraint>,
 }
 
 impl Worker {
@@ -40,9 +40,9 @@ pub enum CreateError {
 #[derive(Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct DataDef {
-    name: String,
-    datatype: DataType,
-    optional: bool,
+    pub name: String,
+    pub datatype: DataType,
+    pub optional: bool,
 }
 
 impl DataDef {
@@ -82,8 +82,8 @@ pub enum DataType {
 #[derive(Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct Constraint {
-    resource: Resource,
-    optional: bool, // will be scheduled on matching nodes preferentially, but can run on non-matching nodes
+    pub resource: Resource,
+    pub optional: bool, // will be scheduled on matching nodes preferentially, but can run on non-matching nodes
 }
 
 impl Constraint {
