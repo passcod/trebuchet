@@ -4,6 +4,8 @@
 #![allow(clippy::non_ascii_literal)]
 
 #[macro_use]
+extern crate lazy_static;
+#[macro_use]
 extern crate log;
 #[macro_use]
 extern crate serde_derive;
@@ -40,13 +42,13 @@ impl System {
     pub fn available_memory_percent(&self) -> IoResult<f32> {
         self.platform
             .memory()
-            .map(|mem| (mem.free.as_usize() as f32) / (mem.total.as_usize() as f32))
+            .map(|mem| (mem.free.as_usize() as f32) / (mem.total.as_usize() as f32) * 100_f32)
     }
 
     /// Retrieves the system available load percentage.
     ///
     /// Calculated as the 1-minute average load divided by the number of cores,
-    /// rendered as a percentage but inversed from 100%.
+    /// rendered as a percentage subtracted from 100%.
     #[allow(clippy::cast_precision_loss)]
     pub fn available_load(&self) -> IoResult<f32> {
         self.platform
@@ -67,10 +69,16 @@ impl System {
     }
 
     /// Checks OpenCL availability by listing the system's OpenCL platforms.
+    ///
+    /// Only checks once per running instance.
     pub fn has_opencl(&self) -> bool {
-        ocl_core::get_platform_ids()
+        lazy_static! {
+        static ref OCL_AVAILABLE: Option<bool> = ocl_core::get_platform_ids()
             .ok()
-            .map_or(false, |list| !list.is_empty())
+            .map(|list| !list.is_empty());
+        }
+
+        OCL_AVAILABLE.unwrap_or(false)
     }
 
     /// Retrieves all IPs associated to all interfaces of the system.
@@ -148,15 +156,15 @@ fn main() {
     println!("🌈 Hello, wonderful world!\n");
 
     let sys = System::new();
-    println!(
-        "Memory available: {:?} KiB",
-        sys.available_memory().unwrap()
-    );
     println!("IPs: {:?}", sys.belonging_ips().unwrap());
-    println!("Inverse load: {:?}", sys.available_load().unwrap());
     println!("Hostname: {:?}", sys.hostname());
     println!("OpenGL available: {:?}", sys.has_opengl());
     println!("OpenCL available: {:?}", sys.has_opencl());
+    println!(
+        "Memory available: {:?}%",
+        sys.available_memory_percent().unwrap()
+    );
+    println!("Load available: {:?}%", sys.available_load().unwrap());
 
     let memcon1 = Resource::Memory(MemoryReq::Absolute(10_240));
     println!(
@@ -265,4 +273,12 @@ fn main() {
         ))),
     ];
     println!("\n{:?}\nScores: {:?}", cons3, sys.check_constraints(&cons3));
+
+    let cons4 = vec![
+        Constraint::optional(Resource::NetworkBelong(NetReq::Name("kare-kun".into()))),
+        Constraint::optional(Resource::NetworkBelong(NetReq::Subnet(
+            "10.0.100.0/24".parse().unwrap(),
+        ))),
+    ];
+    println!("\n{:?}\nScores: {:?}", cons4, sys.check_constraints(&cons4));
 }
