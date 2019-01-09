@@ -137,8 +137,8 @@ pub enum CpuReq {
     /// calculated). A system's load can go over 100%, but Armstrong will not
     /// deliberately allocate jobs in a way that would do that.
     ///
-    /// This constraint is limited to the range `(0, 100)` for practical reasons
-    /// derived from above: 0% doesn't apply a constraint, and 100% never runs.
+    /// There is are soft bounds to the range `(0, 100)` for practical reasons
+    /// derived from above: <=0% doesn't apply a constraint, >=100% never runs.
     #[serde(deserialize_with = "percentage_from_string")]
     #[serde(serialize_with = "percentage_to_string")]
     Load(f32),
