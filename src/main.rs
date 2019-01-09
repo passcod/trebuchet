@@ -9,6 +9,7 @@ extern crate serde_derive;
 extern crate serde_json;
 
 use crate::proto::*;
+use hostname::get_hostname;
 use ipnet::IpNet;
 use std::io::Result as IoResult;
 use systemstat::Platform;
@@ -69,6 +70,9 @@ impl System {
             }
             Resource::Cpu(CpuReq::Load(available)) => &self.available_load()? >= available,
             Resource::NetworkBelong(NetReq::IP(ip)) => self.belonging_ips()?.contains(ip),
+            Resource::NetworkBelong(NetReq::Name(host)) => {
+                get_hostname().map_or(false, |name| host == &name)
+            }
             Resource::NetworkBelong(NetReq::Subnet(sub)) => {
                 self.belonging_ips()?.iter().any(|ip| sub.contains(ip))
             }
@@ -87,6 +91,7 @@ fn main() {
     );
     println!("IPs: {:?}", sys.belonging_ips().unwrap());
     println!("Inverse load: {:?}", sys.available_load().unwrap());
+    println!("Hostname: {:?}", get_hostname());
 
     let memcon1 =
         proto::Constraint::required(proto::Resource::Memory(proto::MemoryReq::Absolute(10_240)));
@@ -153,5 +158,21 @@ fn main() {
         "\n{:?}\nPasses: {}",
         subcon2,
         sys.check_resource(&subcon2.resource).unwrap()
+    );
+
+    let namecon1 = Constraint::required(Resource::NetworkBelong(NetReq::Name("kaydel-ko".into())));
+    println!(
+        "\n{:?}\nPasses: {}",
+        namecon1,
+        sys.check_resource(&namecon1.resource).unwrap()
+    );
+
+    let namecon2 = Constraint::required(Resource::NetworkBelong(proto::NetReq::Name(
+        "example.com".into(),
+    )));
+    println!(
+        "\n{:?}\nPasses: {}",
+        namecon2,
+        sys.check_resource(&namecon2.resource).unwrap()
     );
 }

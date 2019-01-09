@@ -13,6 +13,7 @@ travis-ci = { repository = "passcod/armstrong" }
 maintenance = { status = "actively-developed" }
 
 [dependencies]
+hostname = "0.1.5"
 ipnet = "2.0.0"
 num_cpus = "1.9.0"
 serde = "1.0.84"
