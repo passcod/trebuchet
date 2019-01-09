@@ -50,6 +50,13 @@ impl System {
         get_hostname()
     }
 
+    /// Assumes true since very few platforms won't.
+    ///
+    /// TODO: Actually check. (How?!)
+    pub fn has_opengl(&self) -> bool {
+        true
+    }
+
     pub fn has_opencl(&self) -> bool {
         ocl_core::get_platform_ids()
             .ok()
@@ -81,6 +88,7 @@ impl System {
                 &self.available_memory_percent()? >= available
             }
             Resource::Cpu(CpuReq::Load(available)) => &self.available_load()? >= available,
+            Resource::Gpu(GpuKind::OpenGL) => self.has_opengl(),
             Resource::Gpu(GpuKind::OpenCL) => self.has_opencl(),
             Resource::NetworkBelong(NetReq::IP(ip)) => self.belonging_ips()?.contains(ip),
             Resource::NetworkBelong(NetReq::Name(host)) => {
@@ -135,6 +143,7 @@ fn main() {
     println!("IPs: {:?}", sys.belonging_ips().unwrap());
     println!("Inverse load: {:?}", sys.available_load().unwrap());
     println!("Hostname: {:?}", sys.hostname());
+    println!("OpenGL available: {:?}", sys.has_opengl());
     println!("OpenCL available: {:?}", sys.has_opencl());
 
     let memcon1 = Resource::Memory(MemoryReq::Absolute(10_240));
@@ -165,11 +174,18 @@ fn main() {
         sys.check_resource(&cpucon2).unwrap()
     );
 
-    let gpucon1 = Resource::Gpu(GpuKind::OpenCL);
+    let gpucon1 = Resource::Gpu(GpuKind::OpenGL);
     println!(
         "\n{:?}\nPasses: {}",
         gpucon1,
         sys.check_resource(&gpucon1).unwrap()
+    );
+
+    let gpucon2 = Resource::Gpu(GpuKind::OpenCL);
+    println!(
+        "\n{:?}\nPasses: {}",
+        gpucon2,
+        sys.check_resource(&gpucon2).unwrap()
     );
 
     let ipcon1 = Resource::NetworkBelong(NetReq::IP("::1/128".parse().unwrap()));
