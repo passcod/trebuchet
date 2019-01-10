@@ -1,5 +1,7 @@
 use ipnet::IpNet;
 use serde::{Deserialize, Deserializer, Serializer};
+use std::path::PathBuf;
+use uuid::Uuid;
 
 #[derive(Debug, Deserialize, PartialEq, PartialOrd, Serialize)]
 #[serde(rename_all = "kebab-case")]
@@ -37,6 +39,48 @@ impl Worker {
 pub enum CreateError {
     EmptyWorkerName,
     EmptyDataName,
+}
+
+// A job is the definition, a run is what's running. A job can have several runs,
+// although only one at a time (if it fails and gets re-run).
+#[derive(Debug, Deserialize, PartialEq, PartialOrd, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct Job {
+    /// Target worker name
+    pub work: String,
+    pub constraints: Vec<Constraint>,
+    pub handle: Uuid,
+
+    pub inputs: Vec<Input>,
+    pub outputs: Vec<Output>,
+}
+
+#[derive(Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct Input {
+    pub datatype: DataType,
+    pub storage: DataStore,
+    pub handle: Uuid,
+}
+
+#[derive(Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct Output {
+    pub datatype: DataType,
+    pub storage: DataStore,
+    pub handle: Uuid,
+}
+
+#[derive(Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum DataStore {
+    /// In-memory. Will be lost on shutdown/restart/crashes. Good for streams,
+    /// not great for anything else.
+    Volatile,
+
+    /// Serialised to JSON and stored in a file. Not awesome for streams, okay
+    /// for everything else.
+    File(PathBuf),
 }
 
 #[derive(Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
