@@ -12,5 +12,6 @@ extern crate serde_derive;
 #[cfg_attr(test, macro_use)]
 extern crate serde_json;
 
+pub mod agent;
 pub mod proto;
 pub mod system;
