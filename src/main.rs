@@ -3,7 +3,6 @@
 #![allow(clippy::stutter)]
 #![allow(clippy::non_ascii_literal)]
 
-#[cfg(feature = "gpu")]
 #[macro_use]
 extern crate lazy_static;
 #[macro_use]
@@ -14,7 +13,6 @@ extern crate serde_derive;
 extern crate serde_json;
 
 use crate::proto::*;
-mod gpu;
 use crate::system::*;
 
 pub mod proto;
@@ -26,6 +24,7 @@ fn main() {
     let sys = System::new();
     println!("IPs: {:?}", sys.belonging_ips().unwrap());
     println!("Hostname: {:?}", sys.hostname());
+    println!("GPU detection enabled: {:?}", sys.detect_gpu);
     println!("OpenGL available: {:?}", sys.has_opengl());
     println!("OpenCL available: {:?}", sys.has_opencl());
     println!(
