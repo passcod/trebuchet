@@ -22,4 +22,12 @@ impl WorkerSource for Agent {
     fn register_worker(&mut self, worker: Worker) {
         self.workers.insert(worker.name.clone(), worker);
     }
+
+    fn unregister_worker(&mut self, name: &str) {
+        self.workers.remove(name);
+    }
+
+    fn get_worker(&self, name: &str) -> Option<&Worker> {
+        self.workers.get(name)
+    }
 }

@@ -3,10 +3,12 @@ use std::sync::{Arc, RwLock};
 
 pub trait WorkerSource {
     fn register_worker(&mut self, worker: Worker);
+    fn get_worker(&self, name: &str) -> Option<&Worker>;
+    fn unregister_worker(&mut self, name: &str);
 }
 
 pub struct WorkerServer<W: WorkerSource> {
-    source: RwLock<Arc<W>>,
+    source: Arc<RwLock<W>>,
 }
 
 impl<W: WorkerSource> ws::Handler for WorkerServer<W> {
