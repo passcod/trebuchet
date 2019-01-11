@@ -1,5 +1,6 @@
 use crate::client::MessagePassthru;
 use crate::proto::Worker;
+use crate::raw_message;
 use std::sync::{Arc, RwLock};
 
 pub trait WorkerSource {
@@ -46,8 +47,19 @@ impl<W: WorkerSource> ws::Handler for WorkerServer<W> {
         Ok(())
     }
 
-    fn on_message(&mut self, _msg: ws::Message) -> ws::Result<()> {
+    fn on_message(&mut self, msg: ws::Message) -> ws::Result<()> {
         // handle server messages
+        match msg {
+            ws::Message::Text(rpc) => {
+                //
+            }
+            ws::Message::Binary(raw) => {
+                trace!("raw message received");
+                if let Some((_header, _body)) = raw_message::parse(&raw) {
+                    // TODO: parse header as RPC. Body is extra binary data. E.g. binary stream data.
+                }
+            }
+        };
         Ok(())
     }
 
