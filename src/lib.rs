@@ -13,5 +13,7 @@ extern crate serde_derive;
 extern crate serde_json;
 
 pub mod agent;
+mod client;
 pub mod proto;
+mod server;
 pub mod system;

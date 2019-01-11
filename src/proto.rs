@@ -392,14 +392,16 @@ mod test {
         encode_absolute_number,
         json!(Constraint::required(Resource::Memory(MemoryReq::Absolute(
             128
-        )))).to_string(),
+        ))))
+        .to_string(),
         r#"{"optional":false,"resource":{"memory":128}}"#
     );
     test_assert_eq!(
         encode_percentage_string,
         json!(Constraint::optional(Resource::Memory(
             MemoryReq::Percentage(50.0)
-        ))).to_string(),
+        )))
+        .to_string(),
         r#"{"optional":true,"resource":{"memory":"50%"}}"#
     );
     test_assert_eq!(
@@ -411,14 +413,16 @@ mod test {
         encode_keys_kebab,
         json!(Constraint::required(Resource::NetworkAccess(
             NetReq::Subnet("10.0.0.0/8".parse::<IpNet>().unwrap())
-        ))).to_string(),
+        )))
+        .to_string(),
         r#"{"optional":false,"resource":{"network-access":{"subnet":"10.0.0.0/8"}}}"#
     );
     test_assert_eq!(
         encode_ip_lowercase,
         json!(Constraint::required(Resource::NetworkBelong(NetReq::IP(
             "172.0.2.81/32".parse::<IpNet>().unwrap()
-        )))).to_string(),
+        ))))
+        .to_string(),
         r#"{"optional":false,"resource":{"network-belong":{"ip":"172.0.2.81/32"}}}"#
     );
     test_assert_eq!(
