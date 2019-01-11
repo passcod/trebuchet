@@ -1,6 +1,22 @@
+use crossbeam_channel as cc;
+
+pub type MessagePassthru = (cc::Sender<ws::Message>, cc::Receiver<ws::Message>);
+
 /// Client from Agent to Core.
 pub struct AgentCoreClient {
     sender: ws::Sender,
+    passthru: MessagePassthru,
+}
+
+impl AgentCoreClient {
+    fn create(sender: ws::Sender) -> Self {
+        let passthru = cc::unbounded();
+        Self { sender, passthru }
+    }
+
+    fn corepass(&self) -> MessagePassthru {
+        (self.passthru.0.clone(), self.passthru.1.clone())
+    }
 }
 
 impl ws::Handler for AgentCoreClient {

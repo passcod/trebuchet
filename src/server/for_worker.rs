@@ -1,3 +1,4 @@
+use crate::client::MessagePassthru;
 use crate::proto::Worker;
 use std::sync::{Arc, RwLock};
 
@@ -8,8 +9,24 @@ pub trait WorkerSource {
 }
 
 pub struct WorkerServer<W: WorkerSource> {
+    /// Own websocket end
     sender: ws::Sender,
+
+    /// Source of worker data
     source: Arc<RwLock<W>>,
+
+    /// Pass messages along the core connection
+    corepass: MessagePassthru,
+}
+
+impl<W: WorkerSource> WorkerServer<W> {
+    fn create(sender: ws::Sender, source: Arc<RwLock<W>>, corepass: MessagePassthru) -> Self {
+        Self {
+            sender,
+            source,
+            corepass,
+        }
+    }
 }
 
 impl<W: WorkerSource> ws::Handler for WorkerServer<W> {
