@@ -1,5 +1,7 @@
 /// Client from Agent to Core.
-pub struct AgentCoreClient {}
+pub struct AgentCoreClient {
+    sender: ws::Sender,
+}
 
 impl ws::Handler for AgentCoreClient {
     fn build_request(&mut self, url: &url::Url) -> ws::Result<ws::Request> {

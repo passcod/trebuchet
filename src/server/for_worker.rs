@@ -8,6 +8,7 @@ pub trait WorkerSource {
 }
 
 pub struct WorkerServer<W: WorkerSource> {
+    sender: ws::Sender,
     source: Arc<RwLock<W>>,
 }
 
