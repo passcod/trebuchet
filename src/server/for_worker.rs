@@ -24,15 +24,23 @@ pub struct WorkerServer<W: WorkerSource> {
 
     /// Requests currently awaiting response
     inflight: Inflight,
+
+    /// JSON-RPC server handlers
+    rpc: IoHandler,
 }
 
 impl<W: WorkerSource> WorkerServer<W> {
     fn create(sender: ws::Sender, source: Arc<RwLock<W>>, corepass: MessagePassthru) -> Self {
+        let mut rpc = IoHandler::new();
+
+        rpc.add_method("worker.register", |_| Ok(Value::Bool(true)));
+
         Self {
             sender,
             source,
             corepass,
             inflight: Inflight::default(),
+            rpc,
         }
     }
 }
