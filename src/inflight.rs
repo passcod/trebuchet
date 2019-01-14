@@ -1,7 +1,7 @@
-use arc_swap::ArcSwap;
-use futures::sync::oneshot::{channel, Receiver, Sender};
+use arc_swap::{ArcSwap, ArcSwapOption};
 use jsonrpc_core::{Id, Response};
 use rpds::HashTrieMap;
+use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
     Arc,
@@ -10,25 +10,37 @@ use std::sync::{
 #[derive(Default)]
 pub struct Inflight {
     counter: AtomicUsize,
-    store: ArcSwap<HashTrieMap<Id, Arc<Sender<Response>>>>,
+    store: ArcSwap<HashTrieMap<Id, ArcSwapOption<Sender<Response>>>>,
 }
 
 impl Inflight {
     pub fn launch(&self) -> (Id, Receiver<Response>) {
+        trace!("incrementic atomic");
         let id = Id::Num(self.counter.fetch_add(1, Ordering::AcqRel) as u64);
         let (tx, rx) = channel();
 
-        let atx = Arc::new(tx);
-        self.store
-            .rcu(|inner| inner.insert(id.clone(), atx.clone()));
+        let atx = ArcSwapOption::new(Some(Arc::new(tx)));
+        self.store.rcu(|inner| {
+            let id = id.clone();
+            trace!("rcu over inflight log to insert {:?}", id);
+            inner.insert(id, atx.clone())
+        });
 
         (id, rx)
     }
 
     pub fn recall(&self, id: &Id) -> Option<Sender<Response>> {
         self.store
-            .rcu(|inner| inner.remove(&id.clone()))
-            .get(&id) // this should be safe, as we've just removed the only other copy
-            .map(|tx| Arc::try_unwrap(tx.clone()).unwrap())
+            .rcu(|inner| {
+                let id = id.clone();
+                trace!("rcu over inflight log to remove {:?}", id);
+                inner.remove(&id)
+            })
+            .get(&id)
+            .map(|oatx| {
+                trace!("moving and unwrapping arc over sender");
+                let satx = oatx.swap(None).unwrap();
+                Arc::try_unwrap(satx).unwrap()
+            })
     }
 }

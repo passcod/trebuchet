@@ -1,7 +1,8 @@
 use crate::inflight::Inflight;
 use crate::message;
-use futures::{sync::oneshot::Receiver, Future};
+use futures::Future;
 use jsonrpc_core::{IoHandler, Output, Params, Response};
+use std::sync::mpsc::Receiver;
 
 pub trait RpcHandler {
     const PROTOCOL: &'static str;
@@ -42,6 +43,15 @@ pub trait RpcHandler {
 
         trace!("built notification (and about to send): {:?}", msg);
         self.sender().send(msg)
+    }
+
+    fn respawn(&self, chan: Receiver<Response>, cb: fn(Response)) {
+        trace!("spawn thread for response");
+        std::thread::spawn(move || {
+            let res = chan.recv().expect("Internal comm error");
+            trace!("got response from agent: {:?}", res);
+            cb(res);
+        });
     }
 
     fn rpc_build_request(&self, url: &url::Url) -> ws::Result<ws::Request> {
@@ -98,8 +108,6 @@ pub trait RpcHandler {
             };
         }
 
-        warn!("sleeping 1sec");
-        std::thread::sleep_ms(1000);
         Ok(())
     }
 

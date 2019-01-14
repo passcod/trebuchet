@@ -54,14 +54,16 @@ impl ws::Handler for WorkerAgentClient {
     fn on_open(&mut self, _shake: ws::Handshake) -> ws::Result<()> {
         info!("connected to agent");
 
-        self.call(
-            "worker.register",
-            Params::Map(vec![("foo".into(), "bar".into())].into_iter().collect()),
-            None,
-        )?
-        .inspect(|res| {
-            info!("got response from agent: {:?}", res);
-        });
+        self.respawn(
+            self.call(
+                "worker.register",
+                Params::Map(vec![("foo".into(), "bar".into())].into_iter().collect()),
+                None,
+            )?,
+            |res| {
+                info!("got response from agent: {:?}", res);
+            },
+        );
 
         Ok(())
     }
