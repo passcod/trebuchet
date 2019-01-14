@@ -31,7 +31,10 @@ impl<W: WorkerSource> WorkerServer<W> {
     ) -> Self {
         let mut rpc = IoHandler::new();
 
-        rpc.add_method("worker.register", |_| Ok(Value::Bool(true)));
+        rpc.add_method("worker.register", |_| {
+            info!("hello from registrarland");
+            Ok(Value::Bool(true))
+        });
         rpc.add_method("worker.get", |_| Ok(Value::Bool(true)));
         rpc.add_method("worker.unregister", |_| Ok(Value::Bool(true)));
 

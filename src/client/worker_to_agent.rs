@@ -1,6 +1,7 @@
 use crate::rpc::RpcHandler;
 use crate::inflight::Inflight;
-use jsonrpc_core::IoHandler;
+use futures::Future;
+use jsonrpc_core::{IoHandler, Params};
 
 /// Client from Worker to Agent.
 pub struct WorkerAgentClient {
@@ -48,7 +49,13 @@ impl ws::Handler for WorkerAgentClient {
 
     fn on_open(&mut self, _shake: ws::Handshake) -> ws::Result<()> {
         info!("connected to agent");
-        // send greeting
+
+        self.call("worker.register", Params::Map(vec![
+            ("foo".into(), "bar".into())
+        ].into_iter().collect()), None)?.inspect(|res| {
+            info!("got response from agent: {:?}", res);
+        });
+
         Ok(())
     }
 
