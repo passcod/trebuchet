@@ -1,12 +1,11 @@
 #![forbid(unsafe_code)]
 #![deny(clippy::pedantic)]
-#![allow(clippy::non_ascii_literal)]
 
 use armstrong::proto::{self, *};
 use armstrong::system::*;
 
 fn main() {
-    println!("🌈 Hello, wonderful world!\n");
+    armstrong::init();
 
     let sys = System::new();
     println!("IPs: {:?}", sys.belonging_ips().unwrap());

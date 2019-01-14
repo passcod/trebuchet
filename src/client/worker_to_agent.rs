@@ -2,27 +2,27 @@ use crate::rpc::RpcHandler;
 use crate::inflight::Inflight;
 use jsonrpc_core::IoHandler;
 
-/// Client from Agent to Core.
-pub struct AgentCoreClient {
+/// Client from Worker to Agent.
+pub struct WorkerAgentClient {
     sender: ws::Sender,
     inflight: Inflight,
     rpc: IoHandler,
 }
 
-impl AgentCoreClient {
+impl WorkerAgentClient {
     pub fn create(sender: ws::Sender) -> Self {
         let mut rpc = IoHandler::new();
 
         rpc.add_notification("greetings", |params| {
-            debug!("received greetings from core: {:?}", params);
+            info!("received greetings from agent: {:?}", params);
         });
 
         Self { sender, inflight: Inflight::default(), rpc }
     }
 }
 
-impl RpcHandler for AgentCoreClient {
-    const PROTOCOL: &'static str = "armstrong/agent";
+impl RpcHandler for WorkerAgentClient {
+    const PROTOCOL: &'static str = "armstrong/worker";
 
     fn sender(&self) -> &ws::Sender {
         &self.sender
@@ -37,7 +37,7 @@ impl RpcHandler for AgentCoreClient {
     }
 }
 
-impl ws::Handler for AgentCoreClient {
+impl ws::Handler for WorkerAgentClient {
     fn build_request(&mut self, url: &url::Url) -> ws::Result<ws::Request> {
         self.rpc_build_request(url)
     }
@@ -47,7 +47,7 @@ impl ws::Handler for AgentCoreClient {
     }
 
     fn on_open(&mut self, _shake: ws::Handshake) -> ws::Result<()> {
-        info!("connected to core");
+        info!("connected to agent");
         // send greeting
         Ok(())
     }
