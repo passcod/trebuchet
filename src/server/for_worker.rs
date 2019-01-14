@@ -1,9 +1,8 @@
 use crate::client::{Client, MessagePassthru};
 use crate::inflight::Inflight;
-use crate::message::{parse_binary, parse_plain, Rpc};
 use crate::proto::Worker;
-use futures::Future;
-use jsonrpc_core::{IoHandler, Value};
+use crate::server::Server;
+use jsonrpc_core::{IoHandler, Value, Params};
 use std::sync::{Arc, RwLock};
 
 pub trait WorkerSource {
@@ -61,49 +60,27 @@ impl<W: WorkerSource> Client for WorkerServer<W> {
     }
 }
 
+impl<W: WorkerSource> Server for WorkerServer<W> {
+    fn rpc(&self) -> &IoHandler {
+        &self.rpc
+    }
+}
+
 impl<W: WorkerSource> ws::Handler for WorkerServer<W> {
     fn on_request(&mut self, req: &ws::Request) -> ws::Result<ws::Response> {
-        if req.protocols()?.contains(&&"armstrong/worker") {
-            let mut res = ws::Response::from_request(req)?;
-            res.set_protocol("armstrong/worker");
-            Ok(res)
-        } else {
-            Err(ws::Error::new(ws::ErrorKind::Protocol, "wrong protocol"))
-        }
+        self.server_on_request(req, "armstrong/worker")
     }
 
     fn on_open(&mut self, _shake: ws::Handshake) -> ws::Result<()> {
         info!("connection accepted for worker");
-        // send greeting
-        Ok(())
+        self.notify("greetings".into(), Params::Map(json!({
+            "app": "armstrong agent",
+            "version": env!("CARGO_PKG_VERSION")
+        }).as_object().unwrap().to_owned()), None)
     }
 
     fn on_message(&mut self, msg: ws::Message) -> ws::Result<()> {
-        // handle server messages
-        if let Some(rpc) = match msg {
-            ws::Message::Text(string) => {
-                trace!("string message received: {:?}", string);
-                parse_plain(&string)
-            }
-            ws::Message::Binary(raw) => {
-                trace!("raw message received: {:?}", raw);
-                parse_binary(&raw)
-            }
-        } {
-            match rpc {
-                Rpc::Request(req) => {
-                    trace!("handing off rpc request for handling: {:?}", req);
-                    if let Some(res) = self.rpc.handle_rpc_request(req).wait().unwrap() {
-                        trace!("got rpc response back from handler: {:?}", res);
-                        self.sender.send(json!(res).to_string())?
-                    } else {
-                        trace!("no rpc response back from handler");
-                    }
-                }
-                Rpc::Response(res) => self.handle_response(res)?,
-            };
-        }
-        Ok(())
+        self.server_on_message(msg)
     }
 
     fn on_shutdown(&mut self) {
