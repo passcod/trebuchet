@@ -1,36 +1,49 @@
-use crossbeam_channel as cc;
-
-pub type MessagePassthru = (cc::Sender<ws::Message>, cc::Receiver<ws::Message>);
+use crate::rpc::RpcHandler;
+use crate::inflight::Inflight;
+use jsonrpc_core::IoHandler;
 
 /// Client from Agent to Core.
 pub struct AgentCoreClient {
     sender: ws::Sender,
-    passthru: MessagePassthru,
+    inflight: Inflight,
+    rpc: IoHandler,
 }
 
 impl AgentCoreClient {
     fn create(sender: ws::Sender) -> Self {
-        let passthru = cc::unbounded();
-        Self { sender, passthru }
+        let mut rpc = IoHandler::new();
+
+        rpc.add_notification("greetings", |params| {
+            debug!("received greetings from core: {:?}", params);
+        });
+
+        Self { sender, inflight: Inflight::default(), rpc }
+    }
+}
+
+impl RpcHandler for AgentCoreClient {
+    const PROTOCOL: &'static str = "armstrong/agent";
+
+    fn sender(&self) -> &ws::Sender {
+        &self.sender
     }
 
-    fn corepass(&self) -> MessagePassthru {
-        (self.passthru.0.clone(), self.passthru.1.clone())
+    fn inflight(&self) -> &Inflight {
+        &self.inflight
+    }
+
+    fn rpc(&self) -> &IoHandler {
+        &self.rpc
     }
 }
 
 impl ws::Handler for AgentCoreClient {
     fn build_request(&mut self, url: &url::Url) -> ws::Result<ws::Request> {
-        let mut req = ws::Request::from_url(url)?;
-        req.add_protocol("armstrong/agent");
-        Ok(req)
+        self.rpc_build_request(url)
     }
 
     fn on_response(&mut self, res: &ws::Response) -> ws::Result<()> {
-        match res.protocol()? {
-            Some("armstrong/agent") => Ok(()),
-            _ => Err(ws::Error::new(ws::ErrorKind::Protocol, "wrong protocol")),
-        }
+        self.rpc_on_response(res)
     }
 
     fn on_open(&mut self, _shake: ws::Handshake) -> ws::Result<()> {
@@ -39,9 +52,8 @@ impl ws::Handler for AgentCoreClient {
         Ok(())
     }
 
-    fn on_message(&mut self, _msg: ws::Message) -> ws::Result<()> {
-        // Handle server messages
-        Ok(())
+    fn on_message(&mut self, msg: ws::Message) -> ws::Result<()> {
+        self.rpc_on_message(msg)
     }
 
     fn on_shutdown(&mut self) {

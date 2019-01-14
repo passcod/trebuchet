@@ -1,7 +1,6 @@
-use crate::client::{Client, MessagePassthru};
 use crate::inflight::Inflight;
 use crate::proto::Worker;
-use crate::server::Server;
+use crate::rpc::RpcHandler;
 use jsonrpc_core::{IoHandler, Value, Params};
 use std::sync::{Arc, RwLock};
 
@@ -18,9 +17,6 @@ pub struct WorkerServer<W: WorkerSource> {
     /// Source of worker data
     source: Arc<RwLock<W>>,
 
-    /// Pass messages along the core connection
-    // corepass: MessagePassthru,
-
     /// Requests currently awaiting response
     inflight: Inflight,
 
@@ -32,7 +28,6 @@ impl<W: WorkerSource> WorkerServer<W> {
     pub fn create(
         sender: ws::Sender,
         source: Arc<RwLock<W>>,
-        // corepass: MessagePassthru,
     ) -> Self {
         let mut rpc = IoHandler::new();
 
@@ -43,14 +38,15 @@ impl<W: WorkerSource> WorkerServer<W> {
         Self {
             sender,
             source,
-            // corepass,
             inflight: Inflight::default(),
             rpc,
         }
     }
 }
 
-impl<W: WorkerSource> Client for WorkerServer<W> {
+impl<W: WorkerSource> RpcHandler for WorkerServer<W> {
+    const PROTOCOL: &'static str = "armstrong/worker";
+
     fn sender(&self) -> &ws::Sender {
         &self.sender
     }
@@ -58,9 +54,7 @@ impl<W: WorkerSource> Client for WorkerServer<W> {
     fn inflight(&self) -> &Inflight {
         &self.inflight
     }
-}
 
-impl<W: WorkerSource> Server for WorkerServer<W> {
     fn rpc(&self) -> &IoHandler {
         &self.rpc
     }
@@ -68,7 +62,7 @@ impl<W: WorkerSource> Server for WorkerServer<W> {
 
 impl<W: WorkerSource> ws::Handler for WorkerServer<W> {
     fn on_request(&mut self, req: &ws::Request) -> ws::Result<ws::Response> {
-        self.server_on_request(req, "armstrong/worker")
+        self.rpc_on_request(req)
     }
 
     fn on_open(&mut self, _shake: ws::Handshake) -> ws::Result<()> {
@@ -80,7 +74,7 @@ impl<W: WorkerSource> ws::Handler for WorkerServer<W> {
     }
 
     fn on_message(&mut self, msg: ws::Message) -> ws::Result<()> {
-        self.server_on_message(msg)
+        self.rpc_on_message(msg)
     }
 
     fn on_shutdown(&mut self) {

@@ -7,13 +7,27 @@ use std::io::Write;
 /// Either of a JSON-RPC Request or Response.
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(untagged)]
-pub enum Rpc {
+pub enum RpcMessage {
     Request(Request),
     Response(Response),
 }
 
+/// Parses a `ws::Message` as an RPC Message.
+pub fn parse_ws(msg: ws::Message) -> Option<RpcMessage> {
+    match msg {
+        ws::Message::Text(string) => {
+            trace!("string message received: {:?}", string);
+            parse_plain(&string)
+        }
+        ws::Message::Binary(raw) => {
+            trace!("raw message received: {:?}", raw);
+            parse_binary(&raw)
+        }
+    }
+}
+
 /// Parses a regular string message as an RPC Message.
-pub fn parse_plain(string: &str) -> Option<Rpc> {
+pub fn parse_plain(string: &str) -> Option<RpcMessage> {
     let len = string.len();
     if len < 30 {
         // 30 is the smallest possible JSON-RPC message (notification, single-letter method)
@@ -21,7 +35,7 @@ pub fn parse_plain(string: &str) -> Option<Rpc> {
         return None;
     }
 
-    match serde_json::from_str::<Rpc>(string) {
+    match serde_json::from_str::<RpcMessage>(string) {
         Err(err) => {
             warn!("invalid plain message: {}", err);
             None
@@ -55,7 +69,7 @@ pub fn parse_plain(string: &str) -> Option<Rpc> {
 ///     + if a **Primitive**, replace with an Array containing `[original, raw]`.
 ///
 /// Only single JSON-RPC calls and responses are supported, not batches.
-pub fn parse_binary(raw: &[u8]) -> Option<Rpc> {
+pub fn parse_binary(raw: &[u8]) -> Option<RpcMessage> {
     let len = raw.len();
     if len < 35 {
         // 30 is the smallest possible JSON-RPC message (notification, single-letter method)
@@ -95,12 +109,12 @@ pub fn parse_binary(raw: &[u8]) -> Option<Rpc> {
         Ok(s) => s,
     };
 
-    match serde_json::from_str::<Rpc>(header) {
+    match serde_json::from_str::<RpcMessage>(header) {
         Err(err) => {
             warn!("invalid raw message header: {}", err);
             None
         }
-        Ok(Rpc::Request(Request::Single(mut req))) => {
+        Ok(RpcMessage::Request(Request::Single(mut req))) => {
             match req {
                 Call::Invalid { .. } => {
                     warn!("invalid raw message header: invalid call");
@@ -115,9 +129,9 @@ pub fn parse_binary(raw: &[u8]) -> Option<Rpc> {
             };
 
             trace!("valid binary request parsed: {:?}", req);
-            Some(Rpc::Request(Request::Single(req)))
+            Some(RpcMessage::Request(Request::Single(req)))
         }
-        Ok(Rpc::Response(Response::Single(mut res))) => {
+        Ok(RpcMessage::Response(Response::Single(mut res))) => {
             match res {
                 Output::Success(ref mut succ) => {
                     succ.result = append_value(&succ.result, body);
@@ -131,7 +145,7 @@ pub fn parse_binary(raw: &[u8]) -> Option<Rpc> {
             };
 
             trace!("valid binary response parsed: {:?}", res);
-            Some(Rpc::Response(Response::Single(res)))
+            Some(RpcMessage::Response(Response::Single(res)))
         }
         _ => {
             warn!("invalid raw message header: batch");

@@ -16,5 +16,6 @@ pub mod client;
 mod inflight;
 mod message;
 pub mod proto;
+mod rpc;
 pub mod server;
 pub mod system;
