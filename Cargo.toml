@@ -13,15 +13,18 @@ travis-ci = { repository = "passcod/armstrong" }
 maintenance = { status = "actively-developed" }
 
 [dependencies]
+arc-swap = "0.3.6"
 byteorder = "1.2.7"
 crossbeam-channel = "0.3.6"
 hostname = "0.1.5"
 ipnet = "2.0.0"
-jsonrpc-core = "9.0.0"
+futures = "0.1"
+jsonrpc-core = { git = "https://github.com/passcod/jsonrpc" }
 lazy_static = "1.2.0"
 log = "0.4.6"
 num_cpus = "1.9.0"
 ocl-core = "0.10.0"
+rpds = "0.5.0"
 serde = "1.0.84"
 serde_derive = "1.0.84"
 serde_json = "1.0.34"

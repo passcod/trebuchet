@@ -9,11 +9,12 @@ extern crate lazy_static;
 extern crate log;
 #[macro_use]
 extern crate serde_derive;
-#[cfg_attr(test, macro_use)]
+#[macro_use]
 extern crate serde_json;
 
 pub mod agent;
 mod client;
+mod inflight;
 mod message;
 pub mod proto;
 mod server;

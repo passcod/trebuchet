@@ -1,6 +1,9 @@
-use crate::client::MessagePassthru;
+use crate::client::{Client, MessagePassthru};
+use crate::inflight::Inflight;
 use crate::message::{parse_binary, parse_plain, Rpc};
 use crate::proto::Worker;
+use futures::Future;
+use jsonrpc_core::{IoHandler, Value};
 use std::sync::{Arc, RwLock};
 
 pub trait WorkerSource {
@@ -18,6 +21,9 @@ pub struct WorkerServer<W: WorkerSource> {
 
     /// Pass messages along the core connection
     corepass: MessagePassthru,
+
+    /// Requests currently awaiting response
+    inflight: Inflight,
 }
 
 impl<W: WorkerSource> WorkerServer<W> {
@@ -26,7 +32,18 @@ impl<W: WorkerSource> WorkerServer<W> {
             sender,
             source,
             corepass,
+            inflight: Inflight::default(),
         }
+    }
+}
+
+impl<W: WorkerSource> Client for WorkerServer<W> {
+    fn sender(&self) -> &ws::Sender {
+        &self.sender
+    }
+
+    fn inflight(&self) -> &Inflight {
+        &self.inflight
     }
 }
 
@@ -59,7 +76,14 @@ impl<W: WorkerSource> ws::Handler for WorkerServer<W> {
                 parse_binary(&raw)
             }
         } {
-            //
+            match rpc {
+                Rpc::Request(req) => {
+                    if let Some(res) = self.rpc.handle_rpc_request(req).wait().unwrap() {
+                        self.sender.send(json!(res).to_string())?
+                    }
+                }
+                Rpc::Response(res) => self.handle_response(res)?,
+            };
         }
         Ok(())
     }

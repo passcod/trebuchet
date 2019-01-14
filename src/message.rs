@@ -1,5 +1,8 @@
-use byteorder::{ByteOrder, LittleEndian};
-use jsonrpc_core::{Call, Output, Params, Request, Response, Value};
+use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
+use jsonrpc_core::{
+    Call, Id, MethodCall, Notification, Output, Params, Request, Response, Value, Version,
+};
+use std::io::Write;
 
 /// Either of a JSON-RPC Request or Response.
 #[derive(Debug, Deserialize, Serialize)]
@@ -164,4 +167,40 @@ fn append_value(value: &Value, body: Value) -> Value {
             Value::Array(vec![val, body])
         }
     }
+}
+
+pub fn notification(method: String, params: Params) -> String {
+    json!(Request::Single(
+        Notification {
+            jsonrpc: Some(Version::V2),
+            method,
+            params,
+        }
+        .into(),
+    ))
+    .to_string()
+}
+
+pub fn methodcall(method: String, params: Params, id: Id) -> String {
+    json!(Request::Single(
+        MethodCall {
+            jsonrpc: Some(Version::V2),
+            method,
+            params,
+            id,
+        }
+        .into(),
+    ))
+    .to_string()
+}
+
+#[allow(clippy::cast_possible_truncation)]
+pub fn add_binary(header: String, binary: &[u8]) -> Vec<u8> {
+    let headlen = header.len();
+    let mut buf = Vec::with_capacity(5 + headlen + binary.len());
+    buf.write_all(&[1]).unwrap(); // version
+    buf.write_u32::<LittleEndian>(headlen as u32).unwrap();
+    buf.write_all(header.as_bytes()).unwrap();
+    buf.write_all(binary).unwrap();
+    buf
 }
