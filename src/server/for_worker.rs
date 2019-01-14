@@ -1,5 +1,5 @@
 use crate::client::MessagePassthru;
-use crate::message;
+use crate::message::{parse_binary, parse_plain, Rpc};
 use crate::proto::Worker;
 use std::sync::{Arc, RwLock};
 
@@ -50,13 +50,13 @@ impl<W: WorkerSource> ws::Handler for WorkerServer<W> {
     fn on_message(&mut self, msg: ws::Message) -> ws::Result<()> {
         // handle server messages
         if let Some(rpc) = match msg {
-            ws::Message::Text(s) => {
-                trace!("string message received: {:?}", s);
-                message::parse_string(&s)
+            ws::Message::Text(string) => {
+                trace!("string message received: {:?}", string);
+                parse_plain(&string)
             }
             ws::Message::Binary(raw) => {
                 trace!("raw message received: {:?}", raw);
-                message::parse_binary(&raw)
+                parse_binary(&raw)
             }
         } {
             //

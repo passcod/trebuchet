@@ -9,17 +9,17 @@ pub enum Rpc {
 }
 
 /// Parses a regular string message as an RPC Message.
-pub fn parse_string(s: &str) -> Option<Rpc> {
-    let len = s.len();
+pub fn parse_plain(string: &str) -> Option<Rpc> {
+    let len = string.len();
     if len < 30 {
         // 30 is the smallest possible JSON-RPC message (notification, single-letter method)
-        warn!("invalid string message length ({}) received, ignoring", len);
+        warn!("invalid plain message length ({}) received, ignoring", len);
         return None;
     }
 
-    match serde_json::from_str::<Rpc>(s) {
+    match serde_json::from_str::<Rpc>(string) {
         Err(err) => {
-            warn!("invalid string message: {}", err);
+            warn!("invalid plain message: {}", err);
             None
         }
         Ok(rpc) => Some(rpc),
