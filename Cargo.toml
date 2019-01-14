@@ -31,4 +31,4 @@ ws = "0.7.9"
 
 [dependencies.uuid]
 version = "0.7.1"
-features = ["serde", "u128"]
+features = ["serde"]

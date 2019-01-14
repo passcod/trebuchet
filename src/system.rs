@@ -86,8 +86,9 @@ impl System {
                         systemstat::data::IpAddr::V4(ip) => format!("{:?}/32", ip),
                         systemstat::data::IpAddr::V6(ip) => format!("{:?}/128", ip),
                         _ => continue,
-                    }.parse()
-                        .expect(&format!("Malformed IP address from system {:?}", addr)),
+                    }
+                    .parse()
+                    .expect(&format!("Malformed IP address from system {:?}", addr)),
                 );
             }
         }
