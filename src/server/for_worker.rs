@@ -67,7 +67,7 @@ impl<W: WorkerSource> ws::Handler for WorkerServer<W> {
 
     fn on_open(&mut self, _shake: ws::Handshake) -> ws::Result<()> {
         info!("connection accepted for worker");
-        self.notify("greetings".into(), Params::Map(json!({
+        self.notify("greetings", Params::Map(json!({
             "app": "armstrong agent",
             "version": env!("CARGO_PKG_VERSION")
         }).as_object().unwrap().to_owned()), None)

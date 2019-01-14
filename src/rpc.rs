@@ -12,25 +12,25 @@ pub trait RpcHandler {
 
     fn call(
         &self,
-        method: String,
+        method: &str,
         params: Params,
         binary: Option<&[u8]>,
     ) -> ws::Result<Receiver<Response>> {
         let (id, rx) = self.inflight().launch();
 
         let msg: ws::Message = match binary {
-            None => message::methodcall(method, params, id).into(),
-            Some(raw) => message::add_binary(message::methodcall(method, params, id), raw).into(),
+            None => message::methodcall(method.into(), params, id).into(),
+            Some(raw) => message::add_binary(message::methodcall(method.into(), params, id), raw).into(),
         };
         self.sender().send(msg)?;
 
         Ok(rx)
     }
 
-    fn notify(&self, method: String, params: Params, binary: Option<&[u8]>) -> ws::Result<()> {
+    fn notify(&self, method: &str, params: Params, binary: Option<&[u8]>) -> ws::Result<()> {
         let msg: ws::Message = match binary {
-            None => message::notification(method, params).into(),
-            Some(raw) => message::add_binary(message::notification(method, params), raw).into(),
+            None => message::notification(method.into(), params).into(),
+            Some(raw) => message::add_binary(message::notification(method.into(), params), raw).into(),
         };
         self.sender().send(msg)
     }
