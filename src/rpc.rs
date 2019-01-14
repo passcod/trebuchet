@@ -17,6 +17,7 @@ pub trait RpcHandler {
         binary: Option<&[u8]>,
     ) -> ws::Result<Receiver<Response>> {
         let (id, rx) = self.inflight().launch();
+        trace!("requested new inflight id: {:?}", id);
 
         let msg: ws::Message = match binary {
             None => message::methodcall(method.into(), params, id).into(),
@@ -24,6 +25,8 @@ pub trait RpcHandler {
                 message::add_binary(message::methodcall(method.into(), params, id), raw).into()
             }
         };
+
+        trace!("built method call (and about to send): {:?}", msg);
         self.sender().send(msg)?;
 
         Ok(rx)
@@ -36,16 +39,20 @@ pub trait RpcHandler {
                 message::add_binary(message::notification(method.into(), params), raw).into()
             }
         };
+
+        trace!("built notification (and about to send): {:?}", msg);
         self.sender().send(msg)
     }
 
     fn rpc_build_request(&self, url: &url::Url) -> ws::Result<ws::Request> {
         let mut req = ws::Request::from_url(url)?;
         req.add_protocol(Self::PROTOCOL);
+        trace!("built handshake request {:?}", req);
         Ok(req)
     }
 
     fn rpc_on_response(&self, res: &ws::Response) -> ws::Result<()> {
+        trace!("got handshake response {:?}", res);
         if let Some(proto) = res.protocol()? {
             if proto == Self::PROTOCOL {
                 return Ok(());
@@ -78,34 +85,39 @@ pub trait RpcHandler {
                         trace!("no rpc response back from handler (is it a notification?)");
                     }
                 }
-                message::RpcMessage::Response(res) => self.handle_response(res)?,
+                message::RpcMessage::Response(Response::Single(out)) => {
+                    trace!("got a single response");
+                    self.handle_response(out)?
+                }
+                message::RpcMessage::Response(Response::Batch(outsies)) => {
+                    trace!("got a batch of {} responses", outsies.len());
+                    for out in outsies {
+                        self.handle_response(out)?;
+                    }
+                }
             };
         }
 
+        warn!("sleeping 1sec");
+        std::thread::sleep_ms(1000);
         Ok(())
     }
 
-    fn handle_response_out(&self, out: Output) -> ws::Result<()> {
-        if let Some(tx) = self.inflight().recall(match out {
+    fn handle_response(&self, out: Output) -> ws::Result<()> {
+        trace!("handling single response output: {:?}", out);
+
+        let id = match out {
             Output::Failure(ref fail) => &fail.id,
             Output::Success(ref succ) => &succ.id,
-        }) {
+        };
+
+        trace!("looking up inflight id from response: {:?}", id);
+
+        if let Some(tx) = self.inflight().recall(id) {
+            trace!("matched with existing id, sending response through");
             tx.send(Response::Single(out)).expect("Internal comm error");
         }
 
         Ok(())
-    }
-
-    fn handle_response(&self, res: Response) -> ws::Result<()> {
-        match res {
-            Response::Batch(reses) => {
-                for res in reses {
-                    self.handle_response_out(res)?;
-                }
-
-                Ok(())
-            }
-            Response::Single(out) => self.handle_response_out(out),
-        }
     }
 }
