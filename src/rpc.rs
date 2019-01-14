@@ -1,6 +1,6 @@
 use crate::inflight::Inflight;
 use crate::message;
-use futures::{Future, sync::oneshot::Receiver};
+use futures::{sync::oneshot::Receiver, Future};
 use jsonrpc_core::{IoHandler, Output, Params, Response};
 
 pub trait RpcHandler {
@@ -20,7 +20,9 @@ pub trait RpcHandler {
 
         let msg: ws::Message = match binary {
             None => message::methodcall(method.into(), params, id).into(),
-            Some(raw) => message::add_binary(message::methodcall(method.into(), params, id), raw).into(),
+            Some(raw) => {
+                message::add_binary(message::methodcall(method.into(), params, id), raw).into()
+            }
         };
         self.sender().send(msg)?;
 
@@ -30,7 +32,9 @@ pub trait RpcHandler {
     fn notify(&self, method: &str, params: Params, binary: Option<&[u8]>) -> ws::Result<()> {
         let msg: ws::Message = match binary {
             None => message::notification(method.into(), params).into(),
-            Some(raw) => message::add_binary(message::notification(method.into(), params), raw).into(),
+            Some(raw) => {
+                message::add_binary(message::notification(method.into(), params), raw).into()
+            }
         };
         self.sender().send(msg)
     }

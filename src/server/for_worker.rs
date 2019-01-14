@@ -1,7 +1,7 @@
 use crate::inflight::Inflight;
 use crate::proto::Worker;
 use crate::rpc::RpcHandler;
-use jsonrpc_core::{IoHandler, Value, Params};
+use jsonrpc_core::{IoHandler, Params, Value};
 use std::sync::{Arc, RwLock};
 
 pub trait WorkerSource {
@@ -25,10 +25,7 @@ pub struct WorkerServer<W: WorkerSource> {
 }
 
 impl<W: WorkerSource> WorkerServer<W> {
-    pub fn create(
-        sender: ws::Sender,
-        source: Arc<RwLock<W>>,
-    ) -> Self {
+    pub fn create(sender: ws::Sender, source: Arc<RwLock<W>>) -> Self {
         let mut rpc = IoHandler::new();
 
         rpc.add_method("worker.register", |_| {
@@ -70,10 +67,19 @@ impl<W: WorkerSource> ws::Handler for WorkerServer<W> {
 
     fn on_open(&mut self, _shake: ws::Handshake) -> ws::Result<()> {
         info!("connection accepted for worker");
-        self.notify("greetings", Params::Map(json!({
-            "app": "armstrong agent",
-            "version": env!("CARGO_PKG_VERSION")
-        }).as_object().unwrap().to_owned()), None)
+        self.notify(
+            "greetings",
+            Params::Map(
+                json!({
+                    "app": "armstrong agent",
+                    "version": env!("CARGO_PKG_VERSION")
+                })
+                .as_object()
+                .unwrap()
+                .to_owned(),
+            ),
+            None,
+        )
     }
 
     fn on_message(&mut self, msg: ws::Message) -> ws::Result<()> {

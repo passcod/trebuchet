@@ -10,5 +10,6 @@ fn main() {
     // Palais Idéal
     ws::listen("127.0.0.1:1879", |sender| {
         WorkerServer::create(sender, Agent::arced())
-    }).unwrap();
+    })
+    .unwrap();
 }

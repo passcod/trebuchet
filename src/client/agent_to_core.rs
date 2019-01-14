@@ -1,5 +1,5 @@
-use crate::rpc::RpcHandler;
 use crate::inflight::Inflight;
+use crate::rpc::RpcHandler;
 use jsonrpc_core::IoHandler;
 
 /// Client from Agent to Core.
@@ -17,7 +17,11 @@ impl AgentCoreClient {
             debug!("received greetings from core: {:?}", params);
         });
 
-        Self { sender, inflight: Inflight::default(), rpc }
+        Self {
+            sender,
+            inflight: Inflight::default(),
+            rpc,
+        }
     }
 }
 

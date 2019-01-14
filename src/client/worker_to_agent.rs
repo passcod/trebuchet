@@ -1,5 +1,5 @@
-use crate::rpc::RpcHandler;
 use crate::inflight::Inflight;
+use crate::rpc::RpcHandler;
 use futures::Future;
 use jsonrpc_core::{IoHandler, Params};
 
@@ -18,7 +18,11 @@ impl WorkerAgentClient {
             info!("received greetings from agent: {:?}", params);
         });
 
-        Self { sender, inflight: Inflight::default(), rpc }
+        Self {
+            sender,
+            inflight: Inflight::default(),
+            rpc,
+        }
     }
 }
 
@@ -50,9 +54,12 @@ impl ws::Handler for WorkerAgentClient {
     fn on_open(&mut self, _shake: ws::Handshake) -> ws::Result<()> {
         info!("connected to agent");
 
-        self.call("worker.register", Params::Map(vec![
-            ("foo".into(), "bar".into())
-        ].into_iter().collect()), None)?.inspect(|res| {
+        self.call(
+            "worker.register",
+            Params::Map(vec![("foo".into(), "bar".into())].into_iter().collect()),
+            None,
+        )?
+        .inspect(|res| {
             info!("got response from agent: {:?}", res);
         });
 
