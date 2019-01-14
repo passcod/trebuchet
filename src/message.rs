@@ -6,6 +6,7 @@ use std::io::Write;
 
 /// Either of a JSON-RPC Request or Response.
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(untagged)]
 pub enum Rpc {
     Request(Request),
     Response(Response),
@@ -25,7 +26,10 @@ pub fn parse_plain(string: &str) -> Option<Rpc> {
             warn!("invalid plain message: {}", err);
             None
         }
-        Ok(rpc) => Some(rpc),
+        Ok(rpc) => {
+            trace!("valid plain message parsed: {:?}", rpc);
+            Some(rpc)
+        }
     }
 }
 
@@ -110,6 +114,7 @@ pub fn parse_binary(raw: &[u8]) -> Option<Rpc> {
                 }
             };
 
+            trace!("valid binary request parsed: {:?}", req);
             Some(Rpc::Request(Request::Single(req)))
         }
         Ok(Rpc::Response(Response::Single(mut res))) => {
@@ -125,6 +130,7 @@ pub fn parse_binary(raw: &[u8]) -> Option<Rpc> {
                 }
             };
 
+            trace!("valid binary response parsed: {:?}", res);
             Some(Rpc::Response(Response::Single(res)))
         }
         _ => {

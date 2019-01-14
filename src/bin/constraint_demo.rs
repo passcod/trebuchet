@@ -1,5 +1,6 @@
 #![forbid(unsafe_code)]
 #![deny(clippy::pedantic)]
+#![allow(clippy::non_ascii_literal)]
 
 use armstrong::proto::{self, *};
 use armstrong::system::*;

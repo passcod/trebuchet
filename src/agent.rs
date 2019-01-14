@@ -2,7 +2,9 @@ use crate::proto::Worker;
 use crate::server::WorkerSource;
 use crate::system::System;
 use std::collections::HashMap;
+use std::sync::{Arc, RwLock};
 
+#[derive(Default)]
 pub struct Agent {
     system: System,
 
@@ -16,6 +18,12 @@ pub struct Agent {
     //
     // Why JSON RPC? Simple, lightweight, well-established, can be hand-written in a pinch
     // Why Websocket? Duplex, inspectable, trivial to secure, can be used from browsers as-is
+}
+
+impl Agent {
+    pub fn arced() -> Arc<RwLock<Self>> {
+        Arc::new(RwLock::new(Self::default()))
+    }
 }
 
 impl WorkerSource for Agent {

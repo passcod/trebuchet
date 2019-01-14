@@ -92,8 +92,12 @@ impl<W: WorkerSource> ws::Handler for WorkerServer<W> {
         } {
             match rpc {
                 Rpc::Request(req) => {
+                    trace!("handing off rpc request for handling: {:?}", req);
                     if let Some(res) = self.rpc.handle_rpc_request(req).wait().unwrap() {
+                        trace!("got rpc response back from handler: {:?}", res);
                         self.sender.send(json!(res).to_string())?
+                    } else {
+                        trace!("no rpc response back from handler");
                     }
                 }
                 Rpc::Response(res) => self.handle_response(res)?,
