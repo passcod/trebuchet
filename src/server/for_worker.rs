@@ -20,7 +20,7 @@ pub struct WorkerServer<W: WorkerSource> {
     source: Arc<RwLock<W>>,
 
     /// Pass messages along the core connection
-    corepass: MessagePassthru,
+    // corepass: MessagePassthru,
 
     /// Requests currently awaiting response
     inflight: Inflight,
@@ -30,15 +30,21 @@ pub struct WorkerServer<W: WorkerSource> {
 }
 
 impl<W: WorkerSource> WorkerServer<W> {
-    fn create(sender: ws::Sender, source: Arc<RwLock<W>>, corepass: MessagePassthru) -> Self {
+    pub fn create(
+        sender: ws::Sender,
+        source: Arc<RwLock<W>>,
+        // corepass: MessagePassthru,
+    ) -> Self {
         let mut rpc = IoHandler::new();
 
         rpc.add_method("worker.register", |_| Ok(Value::Bool(true)));
+        rpc.add_method("worker.get", |_| Ok(Value::Bool(true)));
+        rpc.add_method("worker.unregister", |_| Ok(Value::Bool(true)));
 
         Self {
             sender,
             source,
-            corepass,
+            // corepass,
             inflight: Inflight::default(),
             rpc,
         }
