@@ -8,8 +8,8 @@ use std::io::Write;
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum RpcMessage {
-    Request(Request),
-    Response(Response),
+    Response(Response), // Order is important for deserialisation!
+    Request(Request),   // Requests can leave off stuff, so try response first
 }
 
 /// Parses a `ws::Message` as an RPC Message.
