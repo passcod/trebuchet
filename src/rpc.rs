@@ -13,7 +13,7 @@ use std::sync::mpsc::Receiver;
 
 pub trait FromParams {
     // Result<Self, expected thing>
-    fn from(params: Params) -> Result<Self, String>
+    fn from(params: Params) -> Result<Self, &'static str>
     where
         Self: Sized;
 }
@@ -22,12 +22,12 @@ pub trait RpcDefiner {
     fn rpc(&mut self) -> &mut IoHandler;
     fn init_rpc(&mut self);
 
-    fn define_method<D: FromParams + std::fmt::Debug>(
+    fn define_method<D: FromParams + std::fmt::Debug + 'static>(
         &mut self,
         name: &str,
         imp: fn(D) -> RpcResult<Value>,
     ) {
-        self.rpc().add_method(name, |param| {
+        self.rpc().add_method(name, move |param| {
             info!("In-> {:?}", param);
             let converted = match <D as FromParams>::from(param) {
                 Ok(c) => c,
@@ -37,16 +37,8 @@ pub trait RpcDefiner {
                 }
             };
             info!("Out-> {:?}", converted);
-            Ok(Value::Bool(true))
+            imp(converted)
         });
-    }
-
-    fn define_notif<D: FromParams>(
-        &mut self,
-        name: &str,
-        params: D,
-        imp: fn(D) -> RpcResult<Value>,
-    ) {
     }
 }
 
