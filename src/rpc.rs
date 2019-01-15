@@ -11,25 +11,75 @@ use std::sync::mpsc::Receiver;
 // Why JSON RPC? Simple, lightweight, well-established, can be hand-written in a pinch
 // Why Websocket? Duplex, inspectable, trivial to secure, can be used from browsers as-is
 
-pub trait FromParams {
+pub trait FromValue {
     // Result<Self, expected thing>
-    fn from(params: Params) -> Result<Self, &'static str>
+    fn from(val: Value) -> Result<Self, &'static str>
     where
         Self: Sized;
+}
+
+impl FromValue for u64 {
+    fn from(val: Value) -> Result<Self, &'static str> {
+        info!("{:?}", val);
+        match val {
+            Value::Number(n) => n.as_u64().ok_or("an unsigned int"),
+            _ => Err("a number"),
+        }
+    }
+}
+
+impl<T: FromValue> FromValue for Option<T> {
+    fn from(val: Value) -> Result<Self, &'static str> {
+        Ok(match val {
+            Value::Null => None,
+            v => Some(<T as FromValue>::from(v)?),
+        })
+    }
+}
+
+impl<T: FromValue, U: FromValue> FromValue for (T, U) {
+    fn from(val: Value) -> Result<Self, &'static str> {
+        match val {
+            Value::Array(vec) => {
+                if vec.len() == 2 {
+                    let mut vec = vec.clone();
+                    Ok((
+                        <T as FromValue>::from(vec.remove(0))?,
+                        <U as FromValue>::from(vec.remove(0))?,
+                    ))
+                } else {
+                    Err("a two-item array")
+                }
+            }
+            _ => Err("an array"),
+        }
+    }
 }
 
 pub trait RpcDefiner {
     fn rpc(&mut self) -> &mut IoHandler;
     fn init_rpc(&mut self);
 
-    fn define_method<D: FromParams + std::fmt::Debug + 'static>(
+    fn define_method<D: FromValue + std::fmt::Debug + 'static>(
         &mut self,
         name: &str,
         imp: fn(D) -> RpcResult<Value>,
     ) {
         self.rpc().add_method(name, move |param| {
             info!("In-> {:?}", param);
-            let converted = match <D as FromParams>::from(param) {
+            let value = match param {
+                Params::None => Value::Array(Vec::new()),
+                Params::Array(mut vec) => match vec.len() {
+                    0 => Value::Array(Vec::new()),
+                    1 => vec.remove(0),
+                    _ => Value::Array(vec),
+                },
+                Params::Map(_) => return Err(RpcError::invalid_params("expected an array")),
+                // ^ TODO
+            };
+
+            info!("Thru-> {:?}", value);
+            let converted = match <D as FromValue>::from(value) {
                 Ok(c) => c,
                 Err(err) => {
                     info!("Err-> expected {}", err);

@@ -1,6 +1,6 @@
 use crate::inflight::Inflight;
 use crate::proto::Worker;
-use crate::rpc::{FromParams, RpcDefiner, RpcHandler};
+use crate::rpc::{RpcDefiner, RpcHandler};
 use jsonrpc_core::{IoHandler, Params, Value};
 use log::info;
 use serde_json::json;
@@ -61,32 +61,15 @@ impl<W: WorkerSource + Clone> RpcHandler for WorkerServer<W> {
     }
 }
 
-pub type WorkerAdd = (Option<u8>);
-impl FromParams for WorkerAdd {
-    fn from(params: Params) -> Result<Self, &'static str> {
-        match params {
-            Params::None => Ok(None),
-            Params::Map(_) => Err("an array"),
-            Params::Array(vec) => match vec.get(0) {
-                None => Ok(None),
-                Some(Value::Number(n)) => {
-                    n.as_u64().map(|n| Some(n as u8)).ok_or("an unsigned int")
-                }
-                _ => Err("zero or one items"),
-            },
-        }
-    }
-}
-
 impl<W: WorkerSource + Clone> RpcDefiner for WorkerServer<W> {
     fn rpc(&mut self) -> &mut IoHandler {
         &mut self.rpc
     }
 
     fn init_rpc(&mut self) {
-        self.define_method("worker.add", |foo: WorkerAdd| {
+        self.define_method("worker.add", |foo: Option<u64>| {
             info!("hello world {:?}", foo);
-            Ok(Value::Bool(true))
+            Ok(json!(true))
         });
     }
 }
