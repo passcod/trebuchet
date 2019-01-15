@@ -17,6 +17,8 @@ pub trait RpcHandler {
         params: Params,
         binary: Option<&[u8]>,
     ) -> ws::Result<Receiver<Response>> {
+        info!("calling method {} with params: {:?}", method, params);
+
         let (id, rx) = self.inflight().launch();
         trace!("requested new inflight id: {:?}", id);
 
@@ -34,6 +36,8 @@ pub trait RpcHandler {
     }
 
     fn notify(&self, method: &str, params: Params, binary: Option<&[u8]>) -> ws::Result<()> {
+        info!("notifying about {} with params: {:?}", method, params);
+
         let msg: ws::Message = match binary {
             None => message::notification(method.into(), params).into(),
             Some(raw) => {
