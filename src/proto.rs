@@ -190,7 +190,6 @@ pub enum CpuReq {
 }
 
 #[allow(clippy::cast_possible_truncation)]
-// #[allow(clippy::cast_precision_loss)]
 #[allow(clippy::cast_sign_loss)]
 fn kb_from_strum<'de, D>(d: D) -> Result<(usize), D::Error>
 where
