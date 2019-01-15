@@ -1,12 +1,54 @@
 use crate::inflight::Inflight;
 use crate::message;
-use jsonrpc_core::{futures::Future, IoHandler, Output, Params, Response};
+use jsonrpc_core::{
+    futures::Future, Error as RpcError, IoHandler, Output, Params, Response, Result as RpcResult,
+    Value,
+};
 use log::{info, trace};
 use serde_json::json;
 use std::sync::mpsc::Receiver;
 
 // Why JSON RPC? Simple, lightweight, well-established, can be hand-written in a pinch
 // Why Websocket? Duplex, inspectable, trivial to secure, can be used from browsers as-is
+
+pub trait FromParams {
+    // Result<Self, expected thing>
+    fn from(params: Params) -> Result<Self, String>
+    where
+        Self: Sized;
+}
+
+pub trait RpcDefiner {
+    fn rpc(&mut self) -> &mut IoHandler;
+    fn init_rpc(&mut self);
+
+    fn define_method<D: FromParams + std::fmt::Debug>(
+        &mut self,
+        name: &str,
+        imp: fn(D) -> RpcResult<Value>,
+    ) {
+        self.rpc().add_method(name, |param| {
+            info!("In-> {:?}", param);
+            let converted = match <D as FromParams>::from(param) {
+                Ok(c) => c,
+                Err(err) => {
+                    info!("Err-> expected {}", err);
+                    return Err(RpcError::invalid_params(format!("expected {}", err)));
+                }
+            };
+            info!("Out-> {:?}", converted);
+            Ok(Value::Bool(true))
+        });
+    }
+
+    fn define_notif<D: FromParams>(
+        &mut self,
+        name: &str,
+        params: D,
+        imp: fn(D) -> RpcResult<Value>,
+    ) {
+    }
+}
 
 pub trait RpcHandler {
     const PROTOCOL: &'static str;

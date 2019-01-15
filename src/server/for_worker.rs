@@ -1,6 +1,6 @@
 use crate::inflight::Inflight;
 use crate::proto::Worker;
-use crate::rpc::RpcHandler;
+use crate::rpc::{FromParams, RpcDefiner, RpcHandler};
 use jsonrpc_core::{IoHandler, Params, Value};
 use log::info;
 use serde_json::json;
@@ -61,6 +61,34 @@ impl<W: WorkerSource + Clone> RpcHandler for WorkerServer<W> {
     }
 }
 
+pub type WorkerAdd = (Option<u8>);
+impl FromParams for WorkerAdd {
+    fn from(params: Params) -> Result<Self, String> {
+        match params {
+            Params::None => Ok(None),
+            Params::Map(_) => Err("an array".into()),
+            Params::Array(vec) => match vec.get(0) {
+                None => Ok(None),
+                Some(Value::Number(n)) => n
+                    .as_u64()
+                    .map(|n| Some(n as u8))
+                    .ok_or("an unsigned int".into()),
+                _ => Err("zero or one items".into()),
+            },
+        }
+    }
+}
+
+impl<W: WorkerSource + Clone> RpcDefiner for WorkerServer<W> {
+    fn rpc(&mut self) -> &mut IoHandler {
+        &mut self.rpc
+    }
+
+    fn init_rpc(&mut self) {
+        self.define_method("worker.add", |foo: WorkerAdd| Ok(Value::Bool(true)));
+    }
+}
+
 impl<W: WorkerSource + Clone> ws::Handler for WorkerServer<W> {
     fn on_request(&mut self, req: &ws::Request) -> ws::Result<ws::Response> {
         self.rpc_on_request(req)
@@ -68,6 +96,7 @@ impl<W: WorkerSource + Clone> ws::Handler for WorkerServer<W> {
 
     fn on_open(&mut self, _shake: ws::Handshake) -> ws::Result<()> {
         info!("connection accepted for worker");
+        self.init_rpc();
         self.notify(
             "greetings",
             Params::Map(

@@ -55,11 +55,7 @@ impl ws::Handler for WorkerAgentClient {
         info!("connected to agent");
 
         self.respawn(
-            self.call(
-                "worker.register",
-                Params::Map(vec![("foo".into(), "bar".into())].into_iter().collect()),
-                None,
-            )?,
+            self.call("worker.add", Params::Array(vec![(-12).into()]), None)?,
             |res| {
                 info!("got response from agent: {:?}", res);
             },
