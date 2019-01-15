@@ -3,7 +3,7 @@ use serde::{Deserialize, Deserializer, Serializer};
 use std::path::PathBuf;
 use uuid::Uuid;
 
-#[derive(Debug, Deserialize, PartialEq, PartialOrd, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, PartialOrd, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct Worker {
     pub name: String,
@@ -33,7 +33,7 @@ impl Worker {
     }
 }
 
-#[derive(Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 #[serde(rename_all = "kebab-case")]
 #[serde(tag = "error")]
 pub enum CreateError {
@@ -43,7 +43,7 @@ pub enum CreateError {
 
 // A job is the definition, a run is what's running. A job can have several runs,
 // although only one at a time (if it fails and gets re-run).
-#[derive(Debug, Deserialize, PartialEq, PartialOrd, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, PartialOrd, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct Job {
     /// Target worker name
@@ -55,7 +55,7 @@ pub struct Job {
     pub outputs: Vec<Output>,
 }
 
-#[derive(Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct Input {
     pub datatype: DataType,
@@ -63,7 +63,7 @@ pub struct Input {
     pub handle: Uuid,
 }
 
-#[derive(Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct Output {
     pub datatype: DataType,
@@ -71,7 +71,7 @@ pub struct Output {
     pub handle: Uuid,
 }
 
-#[derive(Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum DataStore {
     /// In-memory. Will be lost on shutdown/restart/crashes. Good for streams,
@@ -83,7 +83,7 @@ pub enum DataStore {
     File(PathBuf),
 }
 
-#[derive(Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct DataDef {
     pub name: String,
@@ -114,7 +114,7 @@ impl DataDef {
     }
 }
 
-#[derive(Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum DataType {
     Stream,
@@ -126,7 +126,7 @@ pub enum DataType {
     Json,
 }
 
-#[derive(Debug, Deserialize, PartialEq, PartialOrd, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, PartialOrd, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct Constraint {
     pub resource: Resource,
@@ -149,7 +149,7 @@ impl Constraint {
     }
 }
 
-#[derive(Debug, Deserialize, PartialEq, PartialOrd, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, PartialOrd, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum Resource {
     Memory(MemoryReq), // in kb
@@ -159,7 +159,7 @@ pub enum Resource {
     NetworkAccess(NetReq),
 }
 
-#[derive(Debug, Deserialize, PartialEq, PartialOrd, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, PartialOrd, Serialize)]
 #[serde(rename_all = "kebab-case")]
 #[serde(untagged)]
 pub enum MemoryReq {
@@ -171,7 +171,7 @@ pub enum MemoryReq {
     Percentage(f32),
 }
 
-#[derive(Debug, Deserialize, PartialEq, PartialOrd, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, PartialOrd, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum CpuReq {
     /// In percentage, how much of the system load (1 minute average) is a job
@@ -263,7 +263,7 @@ where
     s.serialize_str(&format!("{}%", pc))
 }
 
-#[derive(Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum GpuKind {
     #[serde(rename = "cuda")]
@@ -276,7 +276,7 @@ pub enum GpuKind {
     OpenGL,
 }
 
-#[derive(Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum NetReq {
     /// belong: has this ip; access: can ping this ip
