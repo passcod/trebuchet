@@ -61,6 +61,6 @@ impl ws::Handler for AgentCoreClient {
     }
 
     fn on_shutdown(&mut self) {
-        // info!() something out
+        self.rpc_on_shutdown()
     }
 }

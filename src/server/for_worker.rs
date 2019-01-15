@@ -86,6 +86,6 @@ impl<W: WorkerSource + Clone> ws::Handler for WorkerServer<W> {
     }
 
     fn on_shutdown(&mut self) {
-        // info!() something out
+        self.rpc_on_shutdown()
     }
 }

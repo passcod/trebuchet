@@ -117,6 +117,10 @@ pub trait RpcHandler {
         Ok(())
     }
 
+    fn rpc_on_shutdown(&mut self) {
+        info!("{} connection closed", Self::PROTOCOL);
+    }
+
     fn handle_response(&self, out: Output) -> ws::Result<()> {
         trace!("handling single response output: {:?}", out);
 

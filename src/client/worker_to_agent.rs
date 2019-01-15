@@ -72,6 +72,6 @@ impl ws::Handler for WorkerAgentClient {
     }
 
     fn on_shutdown(&mut self) {
-        // info!() something out
+        self.rpc_on_shutdown()
     }
 }
