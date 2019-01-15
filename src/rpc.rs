@@ -1,8 +1,10 @@
 use crate::inflight::Inflight;
 use crate::message;
-use futures::Future;
-use jsonrpc_core::{IoHandler, Output, Params, Response};
+use jsonrpc_core::{futures::Future, IoHandler, Output, Params, Response};
 use std::sync::mpsc::Receiver;
+
+// Why JSON RPC? Simple, lightweight, well-established, can be hand-written in a pinch
+// Why Websocket? Duplex, inspectable, trivial to secure, can be used from browsers as-is
 
 pub trait RpcHandler {
     const PROTOCOL: &'static str;

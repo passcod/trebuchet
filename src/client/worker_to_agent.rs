@@ -1,6 +1,5 @@
 use crate::inflight::Inflight;
 use crate::rpc::RpcHandler;
-use futures::Future;
 use jsonrpc_core::{IoHandler, Params};
 
 /// Client from Worker to Agent.
