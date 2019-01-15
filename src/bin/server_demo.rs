@@ -1,7 +1,7 @@
 #![forbid(unsafe_code)]
 #![deny(clippy::pedantic)]
 
-use armstrong::agent::Agent;
+use armstrong::agent::AgentHandle;
 use armstrong::server::WorkerServer;
 
 fn main() {
@@ -9,7 +9,7 @@ fn main() {
 
     // Palais Idéal
     ws::listen("127.0.0.1:1879", |sender| {
-        WorkerServer::create(sender, Agent::arced())
+        WorkerServer::create(sender, AgentHandle::default())
     })
     .unwrap();
 }

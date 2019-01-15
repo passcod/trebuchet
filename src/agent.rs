@@ -1,33 +1,44 @@
 use crate::proto::Worker;
 use crate::server::WorkerSource;
 use crate::system::System;
-use std::collections::HashMap;
-use std::sync::{Arc, RwLock};
+use arc_swap::ArcSwap;
+use rpds::HashTrieMap;
+use std::sync::Arc;
 
-#[derive(Default)]
+#[derive(Clone, Default)]
+pub struct AgentHandle(ArcSwap<Agent>);
+
+#[derive(Clone, Default)]
 pub struct Agent {
-    system: System,
+    system: Arc<System>,
 
     // worker name -> definition
-    workers: HashMap<String, Worker>,
+    workers: HashTrieMap<String, Worker>,
 }
 
 impl Agent {
-    pub fn arced() -> Arc<RwLock<Self>> {
-        Arc::new(RwLock::new(Self::default()))
+    pub fn update_workers(&self, workers: HashTrieMap<String, Worker>) -> Self {
+        Self {
+            system: self.system.clone(),
+            workers,
+        }
     }
 }
 
-impl WorkerSource for Agent {
-    fn register_worker(&mut self, worker: Worker) {
-        self.workers.insert(worker.name.clone(), worker);
+impl WorkerSource for AgentHandle {
+    fn register_worker(&self, worker: Worker) {
+        self.0.rcu(|old| {
+            let worker = worker.clone();
+            old.update_workers(old.workers.insert(worker.name.clone(), worker))
+        });
     }
 
-    fn unregister_worker(&mut self, name: &str) {
-        self.workers.remove(name);
+    fn unregister_worker(&self, name: &str) {
+        self.0
+            .rcu(|old| old.update_workers(old.workers.remove(name)));
     }
 
-    fn get_worker(&self, name: &str) -> Option<&Worker> {
-        self.workers.get(name)
+    fn get_worker(&self, name: &str) -> Option<Worker> {
+        (&self.0.lease().workers).clone().get(name).cloned()
     }
 }
