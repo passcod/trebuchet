@@ -1,5 +1,6 @@
 use ipnet::IpNet;
 use serde::{Deserialize, Deserializer, Serializer};
+use serde_derive::{Deserialize, Serialize};
 use std::path::PathBuf;
 use uuid::Uuid;
 
@@ -336,6 +337,7 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
+    use serde_json::json;
 
     macro_rules! test_assert_eq {
         ($name:ident, $left:expr, $right:expr) => {

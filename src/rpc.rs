@@ -1,6 +1,8 @@
 use crate::inflight::Inflight;
 use crate::message;
 use jsonrpc_core::{futures::Future, IoHandler, Output, Params, Response};
+use log::{info, trace};
+use serde_json::json;
 use std::sync::mpsc::Receiver;
 
 // Why JSON RPC? Simple, lightweight, well-established, can be hand-written in a pinch

@@ -1,5 +1,6 @@
 use arc_swap::{ArcSwap, ArcSwapOption};
 use jsonrpc_core::{Id, Response};
+use log::trace;
 use rpds::HashTrieMap;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::{

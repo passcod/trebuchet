@@ -2,6 +2,8 @@ use crate::inflight::Inflight;
 use crate::proto::Worker;
 use crate::rpc::RpcHandler;
 use jsonrpc_core::{IoHandler, Params, Value};
+use log::info;
+use serde_json::json;
 
 pub trait WorkerSource {
     fn register_worker(&self, worker: Worker);

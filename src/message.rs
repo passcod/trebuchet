@@ -2,6 +2,9 @@ use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
 use jsonrpc_core::{
     Call, Id, MethodCall, Notification, Output, Params, Request, Response, Value, Version,
 };
+use log::{trace, warn};
+use serde_derive::{Deserialize, Serialize};
+use serde_json::json;
 use std::io::Write;
 
 /// Either of a JSON-RPC Request or Response.

@@ -1,6 +1,8 @@
 use crate::proto::*;
 use hostname::get_hostname;
 use ipnet::IpNet;
+use lazy_static::lazy_static;
+use log::error;
 use std::{fmt, io::Result as IoResult};
 use systemstat::Platform;
 

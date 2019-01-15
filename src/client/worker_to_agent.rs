@@ -1,6 +1,7 @@
 use crate::inflight::Inflight;
 use crate::rpc::RpcHandler;
 use jsonrpc_core::{IoHandler, Params};
+use log::info;
 
 /// Client from Worker to Agent.
 pub struct WorkerAgentClient {
