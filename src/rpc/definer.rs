@@ -1,6 +1,6 @@
 use fromvalue::FromValue;
 use jsonrpc_core::{Error as RpcError, IoHandler, Params, Result as RpcResult, Value};
-use log::info;
+use log::{debug, info};
 
 pub trait RpcDefiner {
     fn rpc(&mut self) -> &mut IoHandler;
@@ -8,11 +8,12 @@ pub trait RpcDefiner {
 
     fn define_method<D: FromValue + std::fmt::Debug + 'static>(
         &mut self,
-        name: &str,
+        name: &'static str,
         imp: fn(D) -> RpcResult<Value>,
     ) {
         self.rpc().add_method(name, move |param| {
-            info!("In-> {:?}", param);
+            debug!("receiving for typed method {}, parsing payload", name);
+            debug!("In-> {:?}", param);
             let value = match param {
                 Params::None => Value::Array(Vec::new()),
                 Params::Array(mut vec) => match vec.len() {
@@ -23,15 +24,16 @@ pub trait RpcDefiner {
                 Params::Map(map) => Value::Object(map),
             };
 
-            info!("Thru-> {:?}", value);
+            debug!("Thru-> {:?}", value);
             let converted = match <D as FromValue>::from(value) {
                 Ok(c) => c,
                 Err(err) => {
-                    info!("Err-> expected {}", err);
+                    debug!("Err-> expected {}", err);
                     return Err(RpcError::invalid_params(format!("expected {}", err)));
                 }
             };
-            info!("Out-> {:?}", converted);
+            debug!("Out-> {:?}", converted);
+            info!("handling typed method {}", name);
             imp(converted)
         });
     }
