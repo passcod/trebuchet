@@ -16,54 +16,57 @@ pub struct Worker {
 impl Worker {
     /// Create a Worker definition.
     ///
-    ///
     /// A worker is defined under a system-wide unique identifier (the name) —
     /// conflicting definitions are disallowed by the core, but that is not
     /// enforced locally, allowing agents to create local definitions cheaply
     /// and reject or replace those that fail to register globally at their
     /// leisure.
-    #[allow(clippy::new_ret_no_self)]
-    pub fn new(
-        /// A name uniquely identifying this definition to the system.
-        ///
-        /// The name is enforced to be non-empty, but apart from that everything
-        /// is permitted.
-        name: &str,
-
-        /// An ordered list of inputs to the worker.
-        ///
-        /// These come in two big types: discrete inputs and streaming inputs.
-        /// Streams are pull-based, such that the worker has to request more
-        /// data from the stream. The agent may pre-emptively request some data
-        /// in a buffer to ease loading times.
-        inputs: Vec<DataDef>,
-
-        /// An ordered list of outputs returned from the worker.
-        ///
-        /// Similarly to inputs, both discrete and streaming outputs are
-        /// supported. However, output streams are push-based from the
-        /// perspective of the worker, such that workers can finish quickly and
-        /// avoid hanging around due to slow clients. The stream data is
-        /// buffered in the core and clients experience it as pull-based.
-        outputs: Vec<DataDef>,
-
-        /// An unordered list of constraints.
-        ///
-        /// The constraints are passed as a `Vec` here for convenience, but are
-        /// stored as a `Set`: exact duplicates are naturally eliminated.
-        ///
-        /// Constraints may be optional. See the description of
-        /// [`System::check_constraints`][scc] for an explanation of how this
-        /// behaves.
-        ///
-        /// [scc]: ../foo/bar/todo
-        constraints: Vec<Constraint>,
-    ) ->
+    ///
+    /// # Parameters
+    ///
+    /// - `name`: A name uniquely identifying this definition to the system.
+    ///
+    ///   The name is enforced to be non-empty, but apart from that everything
+    ///   is permitted.
+    ///
+    /// - `inputs`: An ordered list of inputs to the worker.
+    ///
+    ///   These come in two big types: discrete inputs and streaming inputs.
+    ///   Streams are pull-based, such that the worker has to request more
+    ///   data from the stream. The agent may pre-emptively request some data
+    ///   in a buffer to ease loading times.
+    ///
+    /// - `outputs`: An ordered list of outputs returned from the worker.
+    ///
+    ///   Similarly to inputs, both discrete and streaming outputs are
+    ///   supported. However, output streams are push-based from the
+    ///   perspective of the worker, such that workers can finish quickly and
+    ///   avoid hanging around due to slow clients. The stream data is
+    ///   buffered in the core and clients experience it as pull-based.
+    ///
+    /// - `constraints`: An unordered list of constraints.
+    ///
+    ///   The constraints are passed as a `Vec` here for convenience, but are
+    ///   stored as a `Set`: exact duplicates are naturally eliminated.
+    ///
+    ///   Constraints may be optional. See the description of
+    ///   [`System::check_constraints`][scc] for an explanation of how this
+    ///   behaves.
+    ///
+    ///   [scc]: ../foo/bar/todo
+    ///
+    /// # Returns
+    ///
     /// A worker definition.
     ///
     /// This will be an `Err` iff the name passed is empty.
-    Result<Self, CreateError>
-    {
+    #[allow(clippy::new_ret_no_self)]
+    pub fn new(
+        name: &str,
+        inputs: Vec<DataDef>,
+        outputs: Vec<DataDef>,
+        constraints: Vec<Constraint>,
+    ) -> Result<Self, CreateError> {
         if name.is_empty() {
             return Err(CreateError::EmptyWorkerName);
         }
