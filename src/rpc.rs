@@ -2,9 +2,7 @@
 // Why Websocket? Duplex, inspectable, trivial to secure, can be used from browsers as-is
 
 pub use self::definer::*;
-pub use self::from_value::*;
 pub use self::handler::*;
 
 mod definer;
-mod from_value;
 mod handler;

@@ -1,4 +1,4 @@
-use jsonrpc_core::Value;
+pub use jsonrpc_core::Value;
 use std::collections::HashMap;
 
 pub trait FromValue {

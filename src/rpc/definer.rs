@@ -1,4 +1,4 @@
-use crate::rpc::FromValue;
+use fromvalue::FromValue;
 use jsonrpc_core::{Error as RpcError, IoHandler, Params, Result as RpcResult, Value};
 use log::info;
 
