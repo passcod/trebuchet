@@ -67,8 +67,8 @@ impl<W: WorkerSource + Clone> RpcDefiner for WorkerServer<W> {
     }
 
     fn init_rpc(&mut self) {
-        self.define_method("worker.add", |foo: Option<u64>| {
-            info!("hello world {:?}", foo);
+        self.define_method("worker.add", |param: (usize, usize)| {
+            info!("hello world {:?} {:?}", param.0, param.1);
             Ok(json!(true))
         });
     }

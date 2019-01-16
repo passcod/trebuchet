@@ -86,21 +86,31 @@ impl<T: FromValue> FromValue for HashMap<String, T> {
     }
 }
 
-impl<T: FromValue, U: FromValue> FromValue for (T, U) {
-    fn from(val: Value) -> Result<Self, &'static str> {
-        match val {
-            Value::Array(vec) => {
-                if vec.len() == 2 {
-                    let mut vec = vec.clone();
-                    Ok((
-                        <T as FromValue>::from(vec.remove(0))?,
-                        <U as FromValue>::from(vec.remove(0))?,
-                    ))
-                } else {
-                    Err("a two-item array")
+macro_rules! fv_tuples {
+    ($($letter:ident ),+ | $len:expr) => {
+        impl<$($letter: FromValue),+> FromValue for ($($letter),+) {
+            fn from(val: Value) -> Result<Self, &'static str> {
+                match val {
+                    Value::Array(vec) => {
+                        if vec.len() == $len {
+                            let mut vec = vec.clone();
+                            Ok(($(
+                                <$letter as FromValue>::from(vec.remove(0))?
+                            ),+))
+                        } else {
+                            Err(stringify!(an array with $len items))
+                        }
+                    }
+                    _ => Err("an array"),
                 }
             }
-            _ => Err("an array"),
         }
-    }
+    };
 }
+
+fv_tuples!(T, U | 2);
+fv_tuples!(T, U, V | 3);
+fv_tuples!(T, U, V, W | 4);
+fv_tuples!(T, U, V, W, X | 5);
+fv_tuples!(T, U, V, W, X, Y | 6);
+fv_tuples!(T, U, V, W, X, Y, Z | 7);

@@ -20,8 +20,7 @@ pub trait RpcDefiner {
                     1 => vec.remove(0),
                     _ => Value::Array(vec),
                 },
-                Params::Map(_) => return Err(RpcError::invalid_params("expected an array")),
-                // ^ TODO
+                Params::Map(map) => Value::Object(map),
             };
 
             info!("Thru-> {:?}", value);
