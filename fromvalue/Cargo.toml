@@ -1,8 +1,0 @@
-[package]
-authors = ["Félix Saparelli <felix@passcod.name>"]
-name = "fromvalue"
-version = "0.1.0"
-edition = "2018"
-
-[dependencies]
-jsonrpc-core = { git = "https://github.com/passcod/jsonrpc" }

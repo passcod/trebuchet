@@ -8,12 +8,6 @@ repository = "https://github.com/passcod/armstrong"
 
 edition = "2018"
 
-[workspace]
-members = [
-  "fromvalue",
-  "fromvalue-derive"
-]
-
 [badges]
 travis-ci = { repository = "passcod/armstrong" }
 maintenance = { status = "actively-developed" }
@@ -41,9 +35,3 @@ ws = "0.7.9"
 [dependencies.uuid]
 version = "0.7.1"
 features = ["serde"]
-
-[dependencies.fromvalue]
-path = "./fromvalue"
-
-[dependencies.fromvalue-derive]
-path = "./fromvalue-derive"

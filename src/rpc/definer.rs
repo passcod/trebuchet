@@ -1,12 +1,13 @@
-use fromvalue::FromValue;
 use jsonrpc_core::{Error as RpcError, IoHandler, Params, Result as RpcResult, Value};
 use log::{debug, info};
+use serde::de::DeserializeOwned;
+use serde_json::from_value;
 
 pub trait RpcDefiner {
     fn rpc(&mut self) -> &mut IoHandler;
     fn init_rpc(&mut self);
 
-    fn define_method<D: FromValue + std::fmt::Debug + 'static>(
+    fn define_method<D: DeserializeOwned + std::fmt::Debug + 'static>(
         &mut self,
         name: &'static str,
         imp: fn(D) -> RpcResult<Value>,
@@ -25,7 +26,7 @@ pub trait RpcDefiner {
             };
 
             debug!("Thru-> {:?}", value);
-            let converted = match <D as FromValue>::from(value) {
+            let converted: D = match from_value(value) {
                 Ok(c) => c,
                 Err(err) => {
                     debug!("Err-> expected {}", err);

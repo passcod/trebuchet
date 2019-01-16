@@ -1,7 +1,9 @@
 use crate::inflight::Inflight;
+use crate::proto::Worker;
 use crate::rpc::RpcHandler;
 use jsonrpc_core::{IoHandler, Params};
 use log::info;
+use serde_json::json;
 
 /// Client from Worker to Agent.
 pub struct WorkerAgentClient {
@@ -54,10 +56,12 @@ impl ws::Handler for WorkerAgentClient {
     fn on_open(&mut self, _shake: ws::Handshake) -> ws::Result<()> {
         info!("connected to agent");
 
+        let worker = Worker::new("sample", vec![], vec![], vec![]).unwrap();
+
         self.respawn(
             self.call(
                 "worker.add",
-                Params::Array(vec![(12).into(), (34).into()]),
+                Params::Map(json!(worker).as_object_mut().unwrap().clone()),
                 None,
             )?,
             |res| {
