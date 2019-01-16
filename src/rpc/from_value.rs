@@ -154,3 +154,33 @@ fv_tuples!(T, U, V, W | 4);
 fv_tuples!(T, U, V, W, X | 5);
 fv_tuples!(T, U, V, W, X, Y | 6);
 fv_tuples!(T, U, V, W, X, Y, Z | 7);
+
+macro_rules! fv_arrays {
+    ($($zero:tt ),+ | $len:expr) => {
+        impl<T: FromValue> FromValue for [T; $len] {
+            fn from(val: Value) -> Result<Self, &'static str> {
+                match val {
+                    Value::Array(vec) => {
+                        if vec.len() == $len {
+                            let mut vec = vec.clone();
+                            Ok([$(
+                                <T as FromValue>::from(vec.remove($zero))?
+                            ),+])
+                        } else {
+                            Err(stringify!(an array with $len items))
+                        }
+                    }
+                    _ => Err("an array"),
+                }
+            }
+        }
+    };
+}
+
+fv_arrays!(0 | 1);
+fv_arrays!(0, 0 | 2);
+fv_arrays!(0, 0, 0 | 3);
+fv_arrays!(0, 0, 0, 0 | 4);
+fv_arrays!(0, 0, 0, 0, 0 | 5);
+fv_arrays!(0, 0, 0, 0, 0, 0 | 6);
+fv_arrays!(0, 0, 0, 0, 0, 0, 0 | 7);
