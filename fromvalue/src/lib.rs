@@ -1,6 +1,8 @@
 pub use jsonrpc_core::Value;
 use std::collections::HashMap;
 
+// TODO: Uuid
+
 pub trait FromValue {
     // Result<Self, expected thing>
     fn from(val: Value) -> Result<Self, &'static str>
