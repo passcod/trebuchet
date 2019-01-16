@@ -47,6 +47,46 @@ fv_number!(u32 <- u64 <- as_u64 | "an unsigned 32-bit int");
 fv_number!(u64 <- u64 <- as_u64 | "an unsigned int");
 fv_number!(usize <- u64 <- as_u64 | "an unsigned int");
 
+impl FromValue for bool {
+    fn from(val: Value) -> Result<Self, &'static str> {
+        match val {
+            Value::Bool(b) => Ok(b),
+            _ => Err("a boolean"),
+        }
+    }
+}
+
+impl FromValue for String {
+    fn from(val: Value) -> Result<Self, &'static str> {
+        match val {
+            Value::String(s) => Ok(s),
+            _ => Err("a string"),
+        }
+    }
+}
+
+impl FromValue for char {
+    fn from(val: Value) -> Result<Self, &'static str> {
+        match val {
+            Value::String(s) => match s.len() {
+                1 => Ok(s.chars().next().unwrap()),
+                _ => Err("a character"),
+            },
+            _ => Err("a string"),
+        }
+    }
+}
+
+impl FromValue for () {
+    /// A limitation of this is that `Option<()>` will always convert to `None`.
+    fn from(val: Value) -> Result<Self, &'static str> {
+        match val {
+            Value::Null => Ok(()),
+            _ => Err("a null"),
+        }
+    }
+}
+
 impl<T: FromValue> FromValue for Option<T> {
     fn from(val: Value) -> Result<Self, &'static str> {
         Ok(match val {
