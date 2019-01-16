@@ -1,0 +1,22 @@
+[package]
+name = "rpc-macro"
+version = "0.1.0"
+description = "An alternate macro for paritytech/jsonrpc services"
+authors = ["Félix Saparelli <felix@passcod.name>"]
+license = "Artistic-2.0"
+repository = "https://github.com/passcod/armstrong"
+edition = "2018"
+# readme = "README.md"
+
+[badges]
+travis-ci = { repository = "passcod/armstrong" }
+maintenance = { status = "actively-developed" }
+
+[lib]
+proc-macro = true
+
+[dependencies]
+jsonrpc-core = { git = "https://github.com/paritytech/jsonrpc" }
+proc-macro2 = "0.4"
+quote = "0.6"
+syn = "0.15"

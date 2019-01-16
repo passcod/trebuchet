@@ -1,6 +1,6 @@
 use crate::inflight::Inflight;
 use crate::proto::Worker;
-use crate::rpc::{RpcDefiner, RpcHandler};
+use crate::rpc::{parse_params, RpcDefiner, RpcHandler};
 use jsonrpc_core::{IoHandler, Params, Value};
 use log::info;
 use serde_json::json;
@@ -30,7 +30,8 @@ impl<W: WorkerSource + Clone> WorkerServer<W> {
         let mut rpc = IoHandler::new();
 
         rpc.add_method("worker.register", |params| {
-            info!("hello from registrarland {:?}", params);
+            let worker: Worker = parse_params(params)?;
+            source.register_worker(worker);
             Ok(Value::Bool(true))
         });
         rpc.add_method("worker.get", |_| Ok(Value::Bool(true)));
@@ -67,8 +68,9 @@ impl<W: WorkerSource + Clone> RpcDefiner for WorkerServer<W> {
     }
 
     fn init_rpc(&mut self) {
-        self.define_method("worker.add", |worker: Worker| {
+        self.define_method("worker.register", |worker: Worker| {
             info!("hello world {:?}", worker);
+            // this.source().register_worker(worker);
             Ok(json!(true))
         });
     }

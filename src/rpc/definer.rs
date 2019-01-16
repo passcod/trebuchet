@@ -14,28 +14,35 @@ pub trait RpcDefiner {
     ) {
         self.rpc().add_method(name, move |param| {
             debug!("receiving for typed method {}, parsing payload", name);
-            debug!("In-> {:?}", param);
-            let value = match param {
-                Params::None => Value::Array(Vec::new()),
-                Params::Array(mut vec) => match vec.len() {
-                    0 => Value::Array(Vec::new()),
-                    1 => vec.remove(0),
-                    _ => Value::Array(vec),
-                },
-                Params::Map(map) => Value::Object(map),
-            };
-
-            debug!("Thru-> {:?}", value);
-            let converted: D = match from_value(value) {
-                Ok(c) => c,
-                Err(err) => {
-                    debug!("Err-> expected {}", err);
-                    return Err(RpcError::invalid_params(format!("expected {}", err)));
-                }
-            };
-            debug!("Out-> {:?}", converted);
+            let converted: D = parse_params(param)?;
             info!("handling typed method {}", name);
             imp(converted)
         });
     }
+}
+
+pub fn parse_params<D: DeserializeOwned + std::fmt::Debug + 'static>(
+    param: Params,
+) -> RpcResult<D> {
+    debug!("In-> {:?}", param);
+    let value = match param {
+        Params::None => Value::Array(Vec::new()),
+        Params::Array(mut vec) => match vec.len() {
+            0 => Value::Array(Vec::new()),
+            1 => vec.remove(0),
+            _ => Value::Array(vec),
+        },
+        Params::Map(map) => Value::Object(map),
+    };
+
+    debug!("Thru-> {:?}", value);
+    from_value::<D>(value)
+        .map(|out| {
+            debug!("Out-> {:?}", out);
+            out
+        })
+        .map_err(|err| {
+            debug!("Err-> expected {}", err);
+            RpcError::invalid_params(format!("expected {}", err))
+        })
 }
