@@ -3,7 +3,8 @@ extern crate proc_macro;
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, quote_spanned};
 use syn::{
-    parse_macro_input, spanned::Spanned, Data, DeriveInput, Fields, FieldsNamed, FieldsUnnamed,
+    parse_macro_input, punctuated::Punctuated, spanned::Spanned, token::Comma, Data, DeriveInput,
+    Fields, FieldsNamed, FieldsUnnamed, Variant,
 };
 
 #[proc_macro_derive(FromValue)]
@@ -16,8 +17,9 @@ pub fn fromvalue_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStre
         Data::Struct(ref data) => match data.fields {
             Fields::Named(ref fields) => fvstruct(&name, fields),
             Fields::Unnamed(ref fields) => fvtuplestruct(&name, fields),
-            _ => unimplemented!(),
+            Fields::Unit => unimplemented!(), // not quite sure what to do with those
         },
+        Data::Enum(ref data) => fvenum(&name, &data.variants),
         _ => unimplemented!(),
     };
 
@@ -91,6 +93,37 @@ fn fvtuplestruct(structname: &Ident, fields: &FieldsUnnamed) -> TokenStream {
 
         } else {
             Err("an array")
+        }
+    }
+}
+
+fn fvenum(structname: &Ident, fields: &Punctuated<Variant, Comma>) -> TokenStream {
+    unimplemented!()
+}
+
+enum Sketch {
+    Bare,
+    Tup(isize),
+    // LATER: struct variants ( Stru { field: bool } ), discriminants ( Disc = 1 )
+}
+
+impl ::fromvalue::FromValue for Sketch {
+    fn from(val: ::fromvalue::Value) -> Result<Self, &'static str> {
+        match val {
+            ::fromvalue::Value::Object(mut map) => {
+                if false {
+                    unreachable!()
+                } else if map.contains_key(stringify!(Bare)) {
+                    Ok(Sketch::Bare)
+                } else if map.contains_key(stringify!(Tup)) {
+                    Ok(Sketch::Tup(<isize as ::fromvalue::FromValue>::from(
+                        map.remove(stringify!(Tup)).unwrap(),
+                    )?))
+                } else {
+                    Err(stringify!(an object tagged either of: Bare, Tup))
+                }
+            }
+            _ => Err("an object"),
         }
     }
 }
