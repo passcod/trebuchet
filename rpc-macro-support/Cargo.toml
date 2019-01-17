@@ -1,7 +1,7 @@
 [package]
-name = "rpc-macro"
+name = "rpc-macro-support"
 version = "0.1.0"
-description = "An alternate macro for paritytech/jsonrpc services"
+description = "Supporting code for rpc-macro"
 authors = ["Félix Saparelli <felix@passcod.name>"]
 license = "Artistic-2.0"
 repository = "https://github.com/passcod/armstrong"
@@ -12,21 +12,9 @@ edition = "2018"
 travis-ci = { repository = "passcod/armstrong" }
 maintenance = { status = "actively-developed" }
 
-[lib]
-proc-macro = true
-
 [dependencies]
 jsonrpc-core = { git = "https://github.com/paritytech/jsonrpc" }
 jsonrpc-macros = { git = "https://github.com/paritytech/jsonrpc" }
 log = "0.4.6"
-proc-macro2 = "0.4"
-quote = "0.6"
 serde = "1.0.84"
 serde_json = "1.0.34"
-
-[dependencies.syn]
-version = "0.15"
-features = ["full"]
-
-[dependencies.rpc-macro-support]
-path = "../rpc-macro-support"

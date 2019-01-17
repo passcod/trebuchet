@@ -4,6 +4,7 @@ use crate::proto::Worker;
 use crate::rpc::RpcHandler;
 use jsonrpc_core::{IoHandler, Params, Result as RpcResult, Value};
 use log::info;
+use rpc_macro::rpc_impl_struct;
 use serde_json::json;
 
 pub trait WorkerSource {
@@ -33,6 +34,15 @@ impl WorkerServer {
             source,
             inflight: Inflight::default(),
             rpc: IoHandler::new(),
+        }
+    }
+}
+
+rpc_impl_struct! {
+    impl WorkerServer {
+        fn worker_register(&self, worker: Worker) -> RpcResult<bool> {
+            self.source.register_worker(worker);
+            Ok(true)
         }
     }
 }
