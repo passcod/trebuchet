@@ -64,17 +64,13 @@ pub fn rpc_impl_struct(input: pm1::TokenStream) -> pm1::TokenStream {
                 }
             });
 
-            let res: ImplItemMethod = parse_quote! {
+            parse_quote! {
                 #(#attrs)*
                 #vis #fn_token#generics #name(&self, params: ::jsonrpc_core::Params) #output {
                     let (#(#pars),*): (#(#typs),*) = ::rpc_macro_support::parse_params(params)?;
                     #(#stmts)*
                 }
-            };
-
-            // let res: proc_macro2::TokenStream = res.into_token_stream();
-            // panic!("{}", res);
-            res
+            }
         })
         .collect();
 
@@ -102,7 +98,7 @@ pub fn rpc_impl_struct(input: pm1::TokenStream) -> pm1::TokenStream {
     });
 
     // create a new method for delegates
-    let delegate_tokens = quote! {
+    let delegate: ImplItem = parse_quote! {
         /// Transform this into an `IoDelegate`, automatically wrapping the parameters.
         fn to_delegate<M: ::jsonrpc_core::Metadata>(self) -> ::jsonrpc_macros::IoDelegate<Self, M> {
             let mut del = ::jsonrpc_macros::IoDelegate::new(self.into());
@@ -110,10 +106,6 @@ pub fn rpc_impl_struct(input: pm1::TokenStream) -> pm1::TokenStream {
             del
         }
     };
-
-    // reparse it
-    let delegate_pm1: pm1::TokenStream = delegate_tokens.into();
-    let delegate = parse_macro_input!(delegate_pm1 as ImplItem);
 
     // remake items
     let methods: Vec<ImplItem> = methods.into_iter().map(ImplItem::Method).collect();
