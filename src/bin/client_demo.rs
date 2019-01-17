@@ -20,12 +20,12 @@ rpc_impl_struct! {
     impl RpcDerived {
         /// Returns a protocol version
         // #[rpc(name = "version")]
-        fn protocol_version(&self) -> Result<String> {
+        pub fn protocol_version(&self) -> Result<String> {
             Ok("version1".into())
         }
 
         /// Adds two numbers and returns a result
-        fn add(&self, a: u64, b: u64) -> Result<u64> {
+        pub fn add(&self, a: u64, b: u64) -> Result<u64> {
             Ok(a + b)
         }
     }

@@ -40,7 +40,7 @@ impl WorkerServer {
 
 rpc_impl_struct! {
     impl WorkerServer {
-        fn worker_register(&self, worker: Worker) -> RpcResult<bool> {
+        pub fn worker_register(&self, worker: Worker) -> RpcResult<bool> {
             self.source.register_worker(worker);
             Ok(true)
         }

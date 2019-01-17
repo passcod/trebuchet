@@ -2,7 +2,7 @@ extern crate proc_macro as pm1;
 
 use quote::{quote, quote_spanned, ToTokens};
 use syn::spanned::Spanned;
-use syn::{parse_macro_input, parse_quote, FnArg, ImplItem, ImplItemMethod, ItemImpl};
+use syn::{parse_macro_input, parse_quote, FnArg, ImplItem, ImplItemMethod, ItemImpl, Type};
 
 #[proc_macro]
 pub fn rpc_impl_struct(input: pm1::TokenStream) -> pm1::TokenStream {
@@ -78,21 +78,29 @@ pub fn rpc_impl_struct(input: pm1::TokenStream) -> pm1::TokenStream {
     let delegates = methods.iter().map(|method| {
         let name = &method.sig.ident;
         let output = &method.sig.decl.output;
-        let types = method.sig.decl.inputs.iter().filter_map(|input| {
-            if let FnArg::Captured(arg) = input {
-                Some(&arg.ty)
-            } else {
-                None
-            }
-        });
+        let inputs = &method.sig.decl.inputs;
+        let types: Vec<&Type> = inputs
+            .iter()
+            .filter_map(|input| {
+                if let FnArg::Captured(arg) = input {
+                    Some(&arg.ty)
+                } else {
+                    None
+                }
+            })
+            .collect();
 
+        let fun = if types.is_empty() {
+            quote! { fun(base) }
+        } else {
+            quote! { fun(base, params) }
+        };
+
+        // todo: move the parsing into here
         Some(quote_spanned! {method.span()=>
             del.add_method(stringify!(#name), move |base, params| {
-                ::jsonrpc_macros::WrapAsync::wrap_rpc(
-                    &(Self::#name as fn(&_, #(#types),*) #output),
-                    base,
-                    params,
-                )
+                let fun = &(Self::#name as fn(&_, #(#types),*) #output);
+                #fun.map(|res| ::serde_json::to_value(&res).unwrap())
             });
         })
     });

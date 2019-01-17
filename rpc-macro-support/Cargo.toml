@@ -14,7 +14,6 @@ maintenance = { status = "actively-developed" }
 
 [dependencies]
 jsonrpc-core = { git = "https://github.com/paritytech/jsonrpc" }
-jsonrpc-macros = { git = "https://github.com/paritytech/jsonrpc" }
 log = "0.4.6"
 serde = "1.0.84"
 serde_json = "1.0.34"

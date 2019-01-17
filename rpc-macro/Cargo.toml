@@ -17,7 +17,6 @@ proc-macro = true
 
 [dependencies]
 jsonrpc-core = { git = "https://github.com/paritytech/jsonrpc" }
-jsonrpc-macros = { git = "https://github.com/paritytech/jsonrpc" }
 log = "0.4.6"
 proc-macro2 = "0.4"
 quote = "0.6"
