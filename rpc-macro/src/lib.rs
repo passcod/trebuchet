@@ -1,84 +1,26 @@
 extern crate proc_macro as pm1;
 
+use proc_macro2::{Ident, Literal, Punct, Spacing, TokenStream, TokenTree};
 use quote::{quote, quote_spanned, ToTokens};
 use syn::spanned::Spanned;
-use syn::{parse_macro_input, parse_quote, FnArg, ImplItem, ImplItemMethod, ItemImpl, Type};
+use syn::{parse_macro_input, parse_quote, FnArg, ImplItem, ItemImpl, Type};
 
 #[proc_macro]
 pub fn rpc_impl_struct(input: pm1::TokenStream) -> pm1::TokenStream {
     let mut in_impl = parse_macro_input!(input as ItemImpl);
 
-    // split impl into items we care about and the rest
-    let (methods, others): (Vec<ImplItem>, Vec<ImplItem>) =
-        in_impl.items.into_iter().partition(|item| match item {
-            ImplItem::Method(_) => true,
-            _ => false,
-        });
-
     // extract methods
-    let methods = methods.into_iter().map(|item| match item {
-        ImplItem::Method(m) => m,
-        _ => unreachable!(),
+    let methods = in_impl.items.iter().filter_map(|item| match item {
+        ImplItem::Method(m) => Some(m),
+        _ => None,
     });
 
-    // transform method parameters
-    let methods: Vec<ImplItemMethod> = methods
-        .map(|method| {
-            let inputs = &method.sig.decl.inputs;
-            let args: Vec<&FnArg> = inputs
-                .iter()
-                .filter(|input| match input {
-                    FnArg::Captured(_) => true,
-                    _ => false,
-                })
-                .collect();
-
-            if args.is_empty() {
-                // no args (apart from self), no change needed
-                return method;
-            }
-
-            let attrs = &method.attrs;
-            let vis = &method.vis;
-            let name = &method.sig.ident;
-            let fn_token = &method.sig.decl.fn_token;
-            let generics = &method.sig.decl.generics;
-            let output = &method.sig.decl.output;
-            let stmts = &method.block.stmts;
-
-            let pars = inputs.clone().into_iter().flat_map(|input| {
-                if let FnArg::Captured(arg) = input {
-                    let name = &arg.pat;
-                    Some(quote_spanned! {arg.span()=> #name })
-                } else {
-                    None
-                }
-            });
-
-            let typs = inputs.clone().into_iter().flat_map(|input| {
-                if let FnArg::Captured(arg) = input {
-                    let ty = &arg.ty;
-                    Some(quote_spanned! {arg.span()=> #ty })
-                } else {
-                    None
-                }
-            });
-
-            parse_quote! {
-                #(#attrs)*
-                #vis #fn_token#generics #name(&self, params: ::jsonrpc_core::Params) #output {
-                    let (#(#pars),*): (#(#typs),*) = ::rpc_macro_support::parse_params(params)?;
-                    #(#stmts)*
-                }
-            }
-        })
-        .collect();
-
     // generate delegated entries for methods we care about
-    let delegates = methods.iter().map(|method| {
+    let delegates = methods.map(|method| {
         let name = &method.sig.ident;
         let output = &method.sig.decl.output;
         let inputs = &method.sig.decl.inputs;
+
         let types: Vec<&Type> = inputs
             .iter()
             .filter_map(|input| {
@@ -90,16 +32,41 @@ pub fn rpc_impl_struct(input: pm1::TokenStream) -> pm1::TokenStream {
             })
             .collect();
 
+        let args = (0..types.len()).map(|n| {
+            let mut stream = TokenStream::new();
+            let tree: Vec<TokenTree> = vec![
+                Ident::new("args", method.span()).into(),
+                Punct::new('.', Spacing::Alone).into(),
+                Literal::usize_unsuffixed(n).into(),
+            ];
+            stream.extend(tree);
+            stream
+        });
+
+        let typdef = types.clone();
+        let fundef = quote! {&(Self::#name as fn(&_, #(#typdef),*) #output) };
+
         let fun = if types.is_empty() {
-            quote! { fun(base) }
+            quote! {
+                let fun = #fundef;
+                fun(base)
+            }
+        } else if types.len() == 1 {
+            quote! {
+                let arg: #(#types),* = ::rpc_macro_support::parse_params(params)?;
+                let fun = #fundef;
+                fun(base, arg)
+            }
         } else {
-            quote! { fun(base, params) }
+            quote! {
+                let args: (#(#types),*) = ::rpc_macro_support::parse_params(params)?;
+                let fun = #fundef;
+                fun(base, #(#args),*)
+            }
         };
 
-        // todo: move the parsing into here
         Some(quote_spanned! {method.span()=>
             del.add_method(stringify!(#name), move |base, params| {
-                let fun = &(Self::#name as fn(&_, #(#types),*) #output);
                 #fun.map(|res| ::serde_json::to_value(&res).unwrap())
             });
         })
@@ -115,16 +82,9 @@ pub fn rpc_impl_struct(input: pm1::TokenStream) -> pm1::TokenStream {
         }
     };
 
-    // remake items
-    let methods: Vec<ImplItem> = methods.into_iter().map(ImplItem::Method).collect();
+    // insert method
+    in_impl.items.push(delegate);
 
-    // put everything together again
-    let mut items = Vec::new();
-    items.extend(methods);
-    items.extend(others);
-    items.push(delegate);
-
-    // rebuild the impl
-    in_impl.items = items;
+    // rebuild token stream
     in_impl.into_token_stream().into()
 }
