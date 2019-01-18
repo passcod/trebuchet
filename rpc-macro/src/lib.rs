@@ -48,19 +48,27 @@ pub fn rpc_impl_struct(input: pm1::TokenStream) -> pm1::TokenStream {
 
         let fun = if types.is_empty() {
             quote! {
+                ::log::debug!(stringify!(receiving for typed method #name : no params));
                 let fun = #fundef;
+                ::log::info!(stringify!(handling typed method #name));
                 fun(base)
             }
         } else if types.len() == 1 {
+            let typdsc = types.clone();
             quote! {
+                ::log::debug!(stringify!(receiving for typed method #name : parsing params to #(#typdsc),*));
                 let arg: #(#types),* = ::rpc_macro_support::parse_params(params)?;
                 let fun = #fundef;
+                ::log::info!(stringify!(handling typed method #name));
                 fun(base, arg)
             }
         } else {
+            let typdsc = types.clone();
             quote! {
+                ::log::debug!(stringify!(receiving for typed method #name : parsing params to (#(#typdsc),*)));
                 let args: (#(#types),*) = ::rpc_macro_support::parse_params(params)?;
                 let fun = #fundef;
+                ::log::info!(stringify!(handling typed method #name));
                 fun(base, #(#args),*)
             }
         };
