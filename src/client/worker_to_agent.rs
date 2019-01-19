@@ -58,16 +58,14 @@ impl ws::Handler for WorkerAgentClient {
 
         let worker = Worker::new("sample", vec![], vec![], vec![]).unwrap();
 
-        self.respawn(
-            self.call(
-                "worker.add",
-                Params::Map(json!(worker).as_object_mut().unwrap().clone()),
-                None,
-            )?,
+        self.call(
+            "worker.add",
+            Params::Map(json!(worker).as_object_mut().unwrap().clone()),
+            None,
             |res| {
                 info!("got response from agent: {:?}", res);
             },
-        );
+        )?;
 
         Ok(())
     }

@@ -3,7 +3,6 @@ use crate::message;
 use jsonrpc_core::{futures::Future, IoHandler, Output, Params, Response};
 use log::{info, trace};
 use serde_json::json;
-use std::sync::mpsc::Receiver;
 
 pub trait RpcHandler {
     const PROTOCOL: &'static str;
@@ -17,7 +16,8 @@ pub trait RpcHandler {
         method: &str,
         params: Params,
         binary: Option<&[u8]>,
-    ) -> ws::Result<Receiver<Response>> {
+        cb: fn(Response),
+    ) -> ws::Result<()> {
         info!("calling method {} with params: {:?}", method, params);
 
         let (id, rx) = self.inflight().launch();
@@ -33,7 +33,14 @@ pub trait RpcHandler {
         trace!("built method call (and about to send): {:?}", msg);
         self.sender().send(msg)?;
 
-        Ok(rx)
+        trace!("spawn thread for response");
+        std::thread::spawn(move || {
+            let res = rx.recv().expect("Internal comm error");
+            trace!("got response from agent: {:?}", res);
+            cb(res);
+        });
+
+        Ok(())
     }
 
     fn notify(&self, method: &str, params: Params, binary: Option<&[u8]>) -> ws::Result<()> {
@@ -48,15 +55,6 @@ pub trait RpcHandler {
 
         trace!("built notification (and about to send): {:?}", msg);
         self.sender().send(msg)
-    }
-
-    fn respawn(&self, chan: Receiver<Response>, cb: fn(Response)) {
-        trace!("spawn thread for response");
-        std::thread::spawn(move || {
-            let res = chan.recv().expect("Internal comm error");
-            trace!("got response from agent: {:?}", res);
-            cb(res);
-        });
     }
 
     fn rpc_build_request(&self, url: &url::Url) -> ws::Result<ws::Request> {
