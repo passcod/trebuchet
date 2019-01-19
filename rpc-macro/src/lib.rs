@@ -125,8 +125,8 @@ pub fn rpc_impl_struct(input: pm1::TokenStream) -> pm1::TokenStream {
         let typdef = types.clone();
         let fundef = quote! {&(Self::#funname as fn(&_, #(#typdef),*) #output) };
 
-        let param_parser = if let Some(AttrValue::Presence) = attrs.get(&AttrKey::Notification) {
-            quote_spanned! {method.span()=>
+        let (param_parser, kind) = if let Some(AttrValue::Presence) = attrs.get(&AttrKey::Notification) {
+            (quote_spanned! {method.span()=>
                 match ::rpc_macro_support::parse_params(params) {
                     Ok(p) => p,
                     Err(err) => {
@@ -134,36 +134,36 @@ pub fn rpc_impl_struct(input: pm1::TokenStream) -> pm1::TokenStream {
                         return;
                     }
                 }
-            }
+            }, Lit::Str(LitStr::new("notification", method.span())))
         } else {
-            quote_spanned! {method.span()=>
+            (quote_spanned! {method.span()=>
                 ::rpc_macro_support::parse_params(params)?
-            }
+            }, Lit::Str(LitStr::new("method", method.span())))
         };
 
         let fun = if types.is_empty() {
             quote_spanned! {method.span()=>
-                ::log::debug!("receiving for typed method {} (rpc: {}): no params", #funnames, #name);
+                ::log::debug!("receiving for typed {} {} (rpc: {}): no params", #kind, #funnames, #name);
                 let fun = #fundef;
-                ::log::info!("handling typed method {} (rpc: {})", #funnames, #name);
+                ::log::info!("handling typed {} {} (rpc: {})", #kind, #funnames, #name);
                 fun(base)
             }
         } else if types.len() == 1 {
             let typdsc = types.clone();
             quote_spanned! {method.span()=>
-                ::log::debug!("receiving for typed method {} (rpc: {}): parsing params to ({})", #funnames, #name, stringify!(#(#typdsc),*));
+                ::log::debug!("receiving for typed {} {} (rpc: {}): parsing params to ({})", #kind, #funnames, #name, stringify!(#(#typdsc),*));
                 let arg: #(#types),* = #param_parser;
                 let fun = #fundef;
-                ::log::info!("handling typed method {} (rpc: {})", #funnames, #name);
+                ::log::info!("handling typed {} {} (rpc: {})", #kind, #funnames, #name);
                 fun(base, arg)
             }
         } else {
             let typdsc = types.clone();
             quote_spanned! {method.span()=>
-                ::log::debug!("receiving for typed method {} (rpc: {}): parsing params to ({})", #funnames, #name, stringify!(#(#typdsc),*));
+                ::log::debug!("receiving for typed {} {} (rpc: {}): parsing params to ({})", #kind, #funnames, #name, stringify!(#(#typdsc),*));
                 let args: (#(#types),*) = #param_parser;
                 let fun = #fundef;
-                ::log::info!("handling typed method {} (rpc: {})", #funnames, #name);
+                ::log::info!("handling typed {} {} (rpc: {})", #kind, #funnames, #name);
                 fun(base, #(#args),*)
             }
         };

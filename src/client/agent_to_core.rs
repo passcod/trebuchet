@@ -2,6 +2,7 @@ use crate::inflight::Inflight;
 use crate::rpc::RpcHandler;
 use jsonrpc_core::IoHandler;
 use log::{debug, info};
+use rpc_macro::{rpc, rpc_impl_struct};
 
 /// Client from Agent to Core.
 pub struct AgentCoreClient {
@@ -10,13 +11,21 @@ pub struct AgentCoreClient {
     rpc: IoHandler,
 }
 
+pub struct AgentCoreRpc;
+
+rpc_impl_struct! {
+    impl AgentCoreRpc {
+        #[rpc(notification)]
+        pub fn greetings(&self, app: String) {
+            debug!("received greetings from {}", app);
+        }
+    }
+}
+
 impl AgentCoreClient {
     pub fn create(sender: ws::Sender) -> Self {
         let mut rpc = IoHandler::new();
-
-        rpc.add_notification("greetings", |params| {
-            debug!("received greetings from core: {:?}", params);
-        });
+        rpc.extend_with(AgentCoreRpc.to_delegate());
 
         Self {
             sender,

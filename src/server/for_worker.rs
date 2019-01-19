@@ -1,9 +1,9 @@
 use crate::agent::AgentHandle;
 use crate::inflight::Inflight;
 use crate::proto::Worker;
-use crate::rpc::RpcHandler;
-use jsonrpc_core::{IoHandler, Params, Result as RpcResult, Value};
-use log::info;
+use crate::rpc::{app_error, RpcHandler};
+use jsonrpc_core::{IoHandler, Params, Result as RpcResult};
+use log::{debug, info};
 use rpc_macro::{rpc, rpc_impl_struct};
 use serde_json::json;
 
@@ -17,9 +17,6 @@ pub struct WorkerServer {
     /// Own websocket end
     sender: ws::Sender,
 
-    /// Source of worker data
-    source: AgentHandle,
-
     /// Requests currently awaiting response
     inflight: Inflight,
 
@@ -27,23 +24,46 @@ pub struct WorkerServer {
     rpc: IoHandler,
 }
 
-impl WorkerServer {
-    pub fn create(sender: ws::Sender, source: AgentHandle) -> Self {
-        Self {
-            sender,
-            source,
-            inflight: Inflight::default(),
-            rpc: IoHandler::new(),
+pub struct WorkerServerRpc {
+    /// Source of worker data
+    source: AgentHandle,
+}
+
+rpc_impl_struct! {
+    impl WorkerServerRpc {
+        #[rpc(notification)]
+        pub fn greetings(&self, app: String) {
+            debug!("received greetings from {}", app);
+        }
+
+        #[rpc(name = "worker.register")]
+        pub fn worker_register(&self, worker: Worker) -> RpcResult<bool> {
+            self.source.register_worker(worker);
+            Ok(true)
+        }
+
+        #[rpc(name = "worker.unregister")]
+        pub fn worker_unregister(&self, name: String) -> RpcResult<bool> {
+            self.source.unregister_worker(&name);
+            Ok(true)
+        }
+
+        #[rpc(name = "worker.get")]
+        pub fn worker_get(&self, name: String) -> RpcResult<Worker> {
+            self.source.get_worker(&name).ok_or(app_error(404, "worker not found", None))
         }
     }
 }
 
-rpc_impl_struct! {
-    impl WorkerServer {
-        #[rpc(notification, name = "worker.register")]
-        pub fn worker_register(&self, worker: Worker) -> RpcResult<bool> {
-            self.source.register_worker(worker);
-            Ok(true)
+impl WorkerServer {
+    pub fn create(sender: ws::Sender, source: AgentHandle) -> Self {
+        let mut rpc = IoHandler::new();
+        rpc.extend_with(WorkerServerRpc { source }.to_delegate());
+
+        Self {
+            inflight: Inflight::default(),
+            rpc,
+            sender,
         }
     }
 }
@@ -74,14 +94,11 @@ impl ws::Handler for WorkerServer {
         // delegate here
         self.notify(
             "greetings",
-            Params::Map(
-                json!({
-                    "app": "armstrong agent",
-                    "version": env!("CARGO_PKG_VERSION")
-                })
-                .as_object()
-                .unwrap()
-                .to_owned(),
+            Params::Array(
+                json!([format!("armstrong agent v{}", env!("CARGO_PKG_VERSION"))])
+                    .as_array()
+                    .unwrap()
+                    .to_owned(),
             ),
             None,
         )

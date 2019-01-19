@@ -2,7 +2,8 @@ use crate::inflight::Inflight;
 use crate::proto::Worker;
 use crate::rpc::RpcHandler;
 use jsonrpc_core::{IoHandler, Params};
-use log::info;
+use log::{debug, info};
+use rpc_macro::{rpc, rpc_impl_struct};
 use serde_json::json;
 
 /// Client from Worker to Agent.
@@ -12,13 +13,21 @@ pub struct WorkerAgentClient {
     rpc: IoHandler,
 }
 
+pub struct WorkerAgentRpc;
+
+rpc_impl_struct! {
+    impl WorkerAgentRpc {
+        #[rpc(notification)]
+        pub fn greetings(&self, app: String) {
+            debug!("received greetings from {}", app);
+        }
+    }
+}
+
 impl WorkerAgentClient {
     pub fn create(sender: ws::Sender) -> Self {
         let mut rpc = IoHandler::new();
-
-        rpc.add_notification("greetings", |params| {
-            info!("received greetings from agent: {:?}", params);
-        });
+        rpc.extend_with(WorkerAgentRpc.to_delegate());
 
         Self {
             sender,
