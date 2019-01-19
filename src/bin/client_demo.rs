@@ -13,15 +13,15 @@ fn main() {
 }
 
 use jsonrpc_core::{Error, FutureResult, Result};
-use rpc_macro::rpc_impl_struct;
+use rpc_macro::{rpc, rpc_impl_struct};
 
 struct RpcDerived;
 rpc_impl_struct! {
     impl RpcDerived {
         /// Returns a protocol version
-        // #[rpc(name = "version")]
-        pub fn protocol_version(&self) -> Result<String> {
-            Ok("version1".into())
+        #[rpc(notification, name = "version")]
+        pub fn protocol_version(&self) {
+            // Ok("version1".into())
         }
 
         /// Adds two numbers and returns a result
