@@ -2,7 +2,7 @@ use crate::inflight::Inflight;
 use crate::proto::Worker;
 use crate::rpc::RpcHandler;
 use jsonrpc_core::{IoHandler, Params};
-use log::{debug, info};
+use log::info;
 use rpc_macro::{rpc, rpc_impl_struct};
 use serde_json::json;
 
@@ -19,7 +19,7 @@ rpc_impl_struct! {
     impl WorkerAgentRpc {
         #[rpc(notification)]
         pub fn greetings(&self, app: String) {
-            debug!("received greetings from {}", app);
+            info!("received greetings from {}", app);
         }
     }
 }
@@ -68,7 +68,7 @@ impl ws::Handler for WorkerAgentClient {
         let worker = Worker::new("sample", vec![], vec![], vec![]).unwrap();
 
         self.call(
-            "worker.add",
+            "worker.register",
             Params::Map(json!(worker).as_object_mut().unwrap().clone()),
             None,
             |res| {

@@ -121,7 +121,7 @@ impl ws::Handler for Server {
         self.notify(
             "greetings",
             Params::Array(
-                json!([format!("armstrong agent v{}", env!("CARGO_PKG_VERSION"))])
+                json!([format!("ArmstrongAgent/{}", env!("CARGO_PKG_VERSION"))])
                     .as_array()
                     .unwrap()
                     .to_owned(),
