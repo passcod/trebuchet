@@ -1,6 +1,6 @@
 #![forbid(unsafe_code)]
 #![deny(clippy::pedantic)]
-#![allow(clippy::stutter)]
+#![allow(clippy::stutter, clippy::or_fun_call, clippy::needless_pass_by_value)]
 
 pub mod agent;
 pub mod client;
@@ -11,7 +11,7 @@ mod rpc;
 pub mod system;
 
 pub fn init() {
-    if let Err(_) = std::env::var("RUST_LOG") {
+    if std::env::var("RUST_LOG").is_err() {
         std::env::set_var("RUST_LOG", "armstrong=info,ws=info");
     }
 

@@ -185,7 +185,7 @@ fn append_value(value: &Value, body: Value) -> Value {
             map.insert(".raw".into(), body);
             Value::Object(map)
         }
-        val @ _ => {
+        val => {
             let val = val.clone();
             Value::Array(vec![val, body])
         }

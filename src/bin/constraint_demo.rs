@@ -47,18 +47,18 @@ fn main() {
         sys.check_resource(&cpucon2).unwrap()
     );
 
-    let gpucon1 = Resource::Gpu(GpuKind::OpenGL);
+    let gpucomp1 = Resource::Gpu(GpuKind::OpenGL);
     println!(
         "\n{:?}\nPasses: {}",
-        gpucon1,
-        sys.check_resource(&gpucon1).unwrap()
+        gpucomp1,
+        sys.check_resource(&gpucomp1).unwrap()
     );
 
-    let gpucon2 = Resource::Gpu(GpuKind::OpenCL);
+    let gpucomp2 = Resource::Gpu(GpuKind::OpenCL);
     println!(
         "\n{:?}\nPasses: {}",
-        gpucon2,
-        sys.check_resource(&gpucon2).unwrap()
+        gpucomp2,
+        sys.check_resource(&gpucomp2).unwrap()
     );
 
     let ipcon1 = Resource::NetworkBelong(NetReq::IP("::1/128".parse().unwrap()));
