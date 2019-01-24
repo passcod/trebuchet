@@ -1,14 +1,13 @@
 use crate::inflight::Inflight;
-use crate::proto::{Constraint, Worker};
-use crate::rpc::{app_error, RpcHandler};
-use crate::system::System;
+use crate::proto::Worker;
+use crate::rpc::RpcHandler;
 use arc_swap::ArcSwap;
 use jsonrpc_core::{IoHandler, Params, Result as RpcResult};
 use log::{debug, info};
 use rpc_macro::{rpc, rpc_impl_struct};
 use rpds::HashTrieMap;
 use serde_json::json;
-use std::sync::Arc;
+use uuid::Uuid;
 
 pub struct Server {
     /// Own websocket end
@@ -29,18 +28,13 @@ pub struct Rpc {
 
 #[derive(Clone, Default)]
 pub struct State {
-    system: Arc<System>,
-
     // worker name -> definition
     workers: HashTrieMap<String, Worker>,
 }
 
 impl State {
     pub fn update_workers(&self, workers: HashTrieMap<String, Worker>) -> Self {
-        Self {
-            system: self.system.clone(),
-            workers,
-        }
+        Self { workers }
     }
 }
 
@@ -51,32 +45,9 @@ rpc_impl_struct! {
             debug!("received greetings from {}", app);
         }
 
-        #[rpc(name = "agent.checkConstraints")]
-        pub fn check_constraints(&self, constraints: Vec<Constraint>) -> RpcResult<Option<usize>> {
-            Ok(self.state.lease().system.check_constraints(&constraints))
-        }
-
-        #[rpc(name = "worker.register")]
-        pub fn worker_register(&self, worker: Worker) -> RpcResult<bool> {
-            self.state.rcu(|old| {
-                let worker = worker.clone();
-                old.update_workers(old.workers.insert(worker.name.clone(), worker))
-            });
-
-            Ok(true)
-        }
-
-        #[rpc(name = "worker.unregister")]
-        pub fn worker_unregister(&self, name: String) -> RpcResult<bool> {
-            self.state.rcu(|old| old.update_workers(old.workers.remove(&name)));
-
-            Ok(true)
-        }
-
-        #[rpc(name = "worker.get")]
-        pub fn worker_get(&self, name: String) -> RpcResult<Worker> {
-            (&self.state.lease().workers).clone().get(&name).cloned()
-            .ok_or(app_error(404, "worker not found", None))
+        #[rpc(name = "core.agent.hello")]
+        pub fn agent_hello(&self, id: Option<Uuid>) -> RpcResult<Uuid> {
+            Ok(id.unwrap())
         }
     }
 }
@@ -95,7 +66,7 @@ impl Server {
 }
 
 impl RpcHandler for Server {
-    const PROTOCOL: &'static str = "armstrong/worker";
+    const PROTOCOL: &'static str = "armstrong/core";
 
     fn sender(&self) -> &ws::Sender {
         &self.sender
@@ -120,7 +91,7 @@ impl ws::Handler for Server {
         self.notify(
             "greetings",
             Params::Array(
-                json!([format!("ArmstrongAgent/{}", env!("CARGO_PKG_VERSION"))])
+                json!([format!("ArmstrongCore/{}", env!("CARGO_PKG_VERSION"))])
                     .as_array()
                     .unwrap()
                     .to_owned(),
