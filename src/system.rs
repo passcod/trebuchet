@@ -35,8 +35,10 @@ impl System {
 
     /// Retrieves the system available load percentage.
     ///
-    /// Calculated as the 1-minute average load divided by the number of cores,
-    /// rendered as a percentage subtracted from 100%.
+    /// If the `mpstat` tool is available, it uses the idle average. // TODO
+    ///
+    /// Otherwise, it's calculated as the 1-minute average load divided by the
+    /// number of cores, rendered as a percentage subtracted from 100%.
     #[allow(clippy::cast_precision_loss)]
     pub fn available_load(&self) -> IoResult<f32> {
         self.platform
