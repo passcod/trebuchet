@@ -2,7 +2,7 @@ use crate::inflight::Inflight;
 use crate::rpc::RpcHandler;
 use jsonrpc_core::IoHandler;
 use log::{debug, info};
-use rpc_macro::{rpc, rpc_impl_struct};
+use rpc_impl_macro::{rpc, rpc_impl_struct};
 
 /// Client from Agent to Core.
 pub struct AgentCoreClient {

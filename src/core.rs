@@ -4,7 +4,7 @@ use crate::rpc::RpcHandler;
 use arc_swap::ArcSwap;
 use jsonrpc_core::{IoHandler, Params, Result as RpcResult};
 use log::{debug, info};
-use rpc_macro::{rpc, rpc_impl_struct};
+use rpc_impl_macro::{rpc, rpc_impl_struct};
 use rpds::HashTrieMap;
 use serde_json::json;
 use uuid::Uuid;

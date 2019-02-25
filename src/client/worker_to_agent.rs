@@ -3,7 +3,7 @@ use crate::proto::Worker;
 use crate::rpc::RpcHandler;
 use jsonrpc_core::{IoHandler, Params};
 use log::info;
-use rpc_macro::{rpc, rpc_impl_struct};
+use rpc_impl_macro::{rpc, rpc_impl_struct};
 use serde_json::json;
 
 /// Client from Worker to Agent.

@@ -11,9 +11,6 @@ edition = "2018"
 travis-ci = { repository = "passcod/armstrong" }
 maintenance = { status = "actively-developed" }
 
-[workspace]
-members = ["rpc-macro", "rpc-macro-support"]
-
 [dependencies]
 arc-swap = "0.3.6"
 byteorder = "1.2.7"
@@ -24,6 +21,8 @@ hostname = "0.1.5"
 ipnet = "2.0.0"
 jsonrpc-core = { git = "https://github.com/paritytech/jsonrpc" }
 jsonrpc-macros = { git = "https://github.com/paritytech/jsonrpc" }
+rpc-impl-macro = { git = "https://github.com/passcod/rpc-impl-macro", tag = "v0.1.0" }
+rpc-macro-support = { git = "https://github.com/passcod/rpc-impl-macro", tag = "v0.1.0" }
 lazy_static = "1.2.0"
 log = "0.4.6"
 num_cpus = "1.9.0"
@@ -43,9 +42,3 @@ features = ["postgres"]
 [dependencies.uuid]
 version = "0.7.1"
 features = ["serde"]
-
-[dependencies.rpc-macro]
-path = "./rpc-macro"
-
-[dependencies.rpc-macro-support]
-path = "./rpc-macro-support"
