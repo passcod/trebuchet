@@ -96,7 +96,7 @@ impl ws::Handler for Server {
                     .unwrap()
                     .to_owned(),
             ),
-            None,
+            &[],
         )
     }
 

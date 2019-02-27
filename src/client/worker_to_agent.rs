@@ -70,7 +70,7 @@ impl ws::Handler for WorkerAgentClient {
         self.call(
             "worker.register",
             Params::Map(json!(worker).as_object_mut().unwrap().clone()),
-            None,
+            &[],
             |res| {
                 info!("got response from agent: {:?}", res);
             },

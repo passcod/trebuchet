@@ -15,7 +15,7 @@ pub trait RpcHandler {
         &self,
         method: &str,
         params: Params,
-        binary: Option<&[u8]>,
+        binary: &[&[u8]],
         cb: fn(Response),
     ) -> ws::Result<()> {
         info!("calling method {} with params: {:?}", method, params);
@@ -23,11 +23,10 @@ pub trait RpcHandler {
         let (id, rx) = self.inflight().launch();
         trace!("requested new inflight id: {:?}", id);
 
-        let msg: ws::Message = match binary {
-            None => message::methodcall(method.into(), params, id).into(),
-            Some(raw) => {
-                message::add_binary(message::methodcall(method.into(), params, id), raw).into()
-            }
+        let msg: ws::Message = if binary.is_empty() {
+            message::methodcall(method.into(), params, id).into()
+        } else {
+            message::add_chunks(message::methodcall(method.into(), params, id), binary).into()
         };
 
         trace!("built method call (and about to send): {:?}", msg);
@@ -43,14 +42,13 @@ pub trait RpcHandler {
         Ok(())
     }
 
-    fn notify(&self, method: &str, params: Params, binary: Option<&[u8]>) -> ws::Result<()> {
+    fn notify(&self, method: &str, params: Params, binary: &[&[u8]]) -> ws::Result<()> {
         info!("notifying about {} with params: {:?}", method, params);
 
-        let msg: ws::Message = match binary {
-            None => message::notification(method.into(), params).into(),
-            Some(raw) => {
-                message::add_binary(message::notification(method.into(), params), raw).into()
-            }
+        let msg: ws::Message = if binary.is_empty() {
+            message::notification(method.into(), params).into()
+        } else {
+            message::add_chunks(message::notification(method.into(), params), binary).into()
         };
 
         trace!("built notification (and about to send): {:?}", msg);
