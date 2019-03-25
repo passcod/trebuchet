@@ -1,22 +1,34 @@
 use crate::inflight::Inflight;
-use crate::proto::Worker;
 use crate::rpc::RpcHandler;
 use jsonrpc_core::{IoHandler, Params};
 use log::info;
 use rpc_impl_macro::{rpc, rpc_impl_struct};
+use serde_derive::{Deserialize, Serialize};
 use serde_json::json;
 
 /// Client from Worker to Agent.
-pub struct WorkerAgentClient {
+pub struct Client {
     sender: ws::Sender,
     inflight: Inflight,
     rpc: IoHandler,
+    kind: Kind,
+    name: String,
+    tags: Vec<String>,
 }
 
-pub struct WorkerAgentRpc;
+#[derive(Clone, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
+pub enum Kind {
+    /// Client that can be deployed to
+    Target,
+
+    /// Client that controls ops
+    Command,
+}
+
+pub struct Rpc;
 
 rpc_impl_struct! {
-    impl WorkerAgentRpc {
+    impl Rpc {
         #[rpc(notification)]
         pub fn greetings(&self, app: String) {
             info!("received greetings from {}", app);
@@ -24,21 +36,24 @@ rpc_impl_struct! {
     }
 }
 
-impl WorkerAgentClient {
-    pub fn create(sender: ws::Sender) -> Self {
+impl Client {
+    pub fn create(sender: ws::Sender, kind: Kind, name: String, tags: Vec<String>) -> Self {
         let mut rpc = IoHandler::new();
-        rpc.extend_with(WorkerAgentRpc.to_delegate());
+        rpc.extend_with(Rpc.to_delegate());
 
         Self {
             sender,
             inflight: Inflight::default(),
             rpc,
+            kind,
+            name,
+            tags,
         }
     }
 }
 
-impl RpcHandler for WorkerAgentClient {
-    const PROTOCOL: &'static str = "armstrong/worker";
+impl RpcHandler for Client {
+    const PROTOCOL: &'static str = "trebuchet/castle";
 
     fn sender(&self) -> &ws::Sender {
         &self.sender
@@ -53,7 +68,7 @@ impl RpcHandler for WorkerAgentClient {
     }
 }
 
-impl ws::Handler for WorkerAgentClient {
+impl ws::Handler for Client {
     fn build_request(&mut self, url: &url::Url) -> ws::Result<ws::Request> {
         self.rpc_build_request(url)
     }
@@ -63,17 +78,17 @@ impl ws::Handler for WorkerAgentClient {
     }
 
     fn on_open(&mut self, _shake: ws::Handshake) -> ws::Result<()> {
-        info!("connected to agent");
+        info!("connected to castle");
 
-        let worker = Worker::new("sample", vec![], vec![], vec![]).unwrap();
-
-        self.call(
-            "worker.register",
-            Params::Map(json!(worker).as_object_mut().unwrap().clone()),
+        self.notify(
+            "greetings",
+            Params::Array(json!([
+                format!("Trebuchet/{}", env!("CARGO_PKG_VERSION")),
+                &self.kind,
+                &self.name,
+                &self.tags,
+            ]).as_array().unwrap().clone()),
             &[],
-            |res| {
-                info!("got response from agent: {:?}", res);
-            },
         )?;
 
         Ok(())

@@ -1,7 +1,7 @@
 use crate::inflight::Inflight;
 use crate::message;
 use jsonrpc_core::{futures::Future, IoHandler, Output, Params, Response};
-use log::{info, trace};
+use log::{debug, trace};
 use serde_json::json;
 
 pub trait RpcHandler {
@@ -18,7 +18,7 @@ pub trait RpcHandler {
         binary: &[&[u8]],
         cb: fn(Response),
     ) -> ws::Result<()> {
-        info!("calling method {} with params: {:?}", method, params);
+        debug!("calling method {} with params: {:?}", method, params);
 
         let (id, rx) = self.inflight().launch();
         trace!("requested new inflight id: {:?}", id);
@@ -43,7 +43,7 @@ pub trait RpcHandler {
     }
 
     fn notify(&self, method: &str, params: Params, binary: &[&[u8]]) -> ws::Result<()> {
-        info!("notifying about {} with params: {:?}", method, params);
+        debug!("notifying about {} with params: {:?}", method, params);
 
         let msg: ws::Message = if binary.is_empty() {
             message::notification(method.into(), params).into()
@@ -113,7 +113,7 @@ pub trait RpcHandler {
     }
 
     fn rpc_on_shutdown(&mut self) {
-        info!("{} connection closed", Self::PROTOCOL);
+        debug!("{} connection closed", Self::PROTOCOL);
     }
 
     fn handle_response(&self, out: Output) -> ws::Result<()> {

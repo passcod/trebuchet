@@ -1,28 +1,29 @@
 [package]
-name = "armstrong"
-version = "0.1.0"
 authors = ["Félix Saparelli <felix@passcod.name>"]
-license = "Artistic-2.0"
-repository = "https://github.com/passcod/armstrong"
 edition = "2018"
-# readme = "README.md"
+license = "Artistic-2.0"
+name = "trebuchet"
+repository = "https://github.com/passcod/trebuchet"
+version = "0.1.0"
 
 [badges]
-travis-ci = { repository = "passcod/armstrong" }
-maintenance = { status = "actively-developed" }
+
+[badges.maintenance]
+status = "actively-developed"
+
+[badges.travis-ci]
+repository = "passcod/trebuchet"
 
 [dependencies]
 arc-swap = "0.3.6"
+bus = "2.2.1"
 byteorder = "1.2.7"
 crossbeam-channel = "0.3.6"
 dotenv = "0.9.0"
 env_logger = "0.6.0"
+gethostname = "0.2.0"
 hostname = "0.1.5"
 ipnet = "2.0.0"
-jsonrpc-core = { git = "https://github.com/paritytech/jsonrpc" }
-jsonrpc-macros = { git = "https://github.com/paritytech/jsonrpc" }
-rpc-impl-macro = { git = "https://github.com/passcod/rpc-impl-macro", tag = "v0.1.0" }
-rpc-macro-support = { git = "https://github.com/passcod/rpc-impl-macro", tag = "v0.1.0" }
 lazy_static = "1.2.0"
 log = "0.4.6"
 num_cpus = "1.9.0"
@@ -36,9 +37,23 @@ url = "1.7.2"
 ws = "0.7.9"
 
 [dependencies.diesel]
-version = "1.0.0"
 features = ["postgres"]
+version = "1.0.0"
+
+[dependencies.jsonrpc-core]
+git = "https://github.com/paritytech/jsonrpc"
+
+[dependencies.jsonrpc-macros]
+git = "https://github.com/paritytech/jsonrpc"
+
+[dependencies.rpc-impl-macro]
+git = "https://github.com/passcod/rpc-impl-macro"
+tag = "v0.1.1"
+
+[dependencies.rpc-macro-support]
+git = "https://github.com/passcod/rpc-impl-macro"
+tag = "v0.1.1"
 
 [dependencies.uuid]
+features = ["serde", "v4"]
 version = "0.7.1"
-features = ["serde"]

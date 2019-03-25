@@ -1,17 +1,22 @@
+use crate::Bus;
 use crate::inflight::Inflight;
-use crate::proto::Worker;
 use crate::rpc::RpcHandler;
-use arc_swap::ArcSwap;
 use jsonrpc_core::{IoHandler, Params, Result as RpcResult};
 use log::{debug, info};
 use rpc_impl_macro::{rpc, rpc_impl_struct};
-use rpds::HashTrieMap;
 use serde_json::json;
+use std::thread::{JoinHandle, spawn};
 use uuid::Uuid;
 
 pub struct Server {
     /// Own websocket end
     sender: ws::Sender,
+
+    /// Castle bus
+    bus: Bus<Missive>,
+
+    /// Handler thread for this connection
+    thread: JoinHandle<()>,
 
     /// Requests currently awaiting response
     inflight: Inflight,
@@ -20,29 +25,23 @@ pub struct Server {
     rpc: IoHandler,
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub struct Rpc {
-    /// Source of worker data
-    state: ArcSwap<State>,
+    /// Castle bus
+    bus: Bus<Missive>,
 }
 
-#[derive(Clone, Default)]
-pub struct State {
-    // worker name -> definition
-    workers: HashTrieMap<String, Worker>,
-}
-
-impl State {
-    pub fn update_workers(&self, workers: HashTrieMap<String, Worker>) -> Self {
-        Self { workers }
+impl Rpc {
+    fn new(bus: Bus<Missive>) -> Self {
+        Self { bus }
     }
 }
 
 rpc_impl_struct! {
     impl Rpc {
         #[rpc(notification)]
-        pub fn greetings(&self, app: String) {
-            debug!("received greetings from {}", app);
+        pub fn greetings(&self, app: String, kind: crate::client::Kind, name: String, tags: Vec<String>) {
+            info!("received greetings from a {:?} client named \"{}\" with tags: {:?} running {}", kind, name, tags, app);
         }
 
         #[rpc(name = "core.agent.hello")]
@@ -53,11 +52,17 @@ rpc_impl_struct! {
 }
 
 impl Server {
-    pub fn new(sender: ws::Sender) -> Self {
+    pub fn new(sender: ws::Sender, bus: Bus<Missive>) -> Self {
         let mut rpc = IoHandler::new();
-        rpc.extend_with(Rpc::default().to_delegate());
+        rpc.extend_with(Rpc::new(bus.clone()).to_delegate());
+
+        let workws = sender.clone();
+        let workbus = bus.clone();
+        let thread = spawn(|| { worker(workws, workbus) });
 
         Self {
+            bus,
+            thread,
             inflight: Inflight::default(),
             rpc,
             sender,
@@ -66,7 +71,7 @@ impl Server {
 }
 
 impl RpcHandler for Server {
-    const PROTOCOL: &'static str = "armstrong/core";
+    const PROTOCOL: &'static str = "trebuchet/castle";
 
     fn sender(&self) -> &ws::Sender {
         &self.sender
@@ -87,17 +92,8 @@ impl ws::Handler for Server {
     }
 
     fn on_open(&mut self, _shake: ws::Handshake) -> ws::Result<()> {
-        info!("connection accepted");
-        self.notify(
-            "greetings",
-            Params::Array(
-                json!([format!("ArmstrongCore/{}", env!("CARGO_PKG_VERSION"))])
-                    .as_array()
-                    .unwrap()
-                    .to_owned(),
-            ),
-            &[],
-        )
+        debug!("connection accepted");
+        Ok(())
     }
 
     fn on_message(&mut self, msg: ws::Message) -> ws::Result<()> {
@@ -106,5 +102,16 @@ impl ws::Handler for Server {
 
     fn on_shutdown(&mut self) {
         self.rpc_on_shutdown()
+    }
+}
+
+#[derive(Clone)]
+pub enum Missive {
+    Hello
+}
+
+fn worker(ws: ws::Sender, bus: Bus<Missive>) {
+    for missive in bus.iter() {
+        //
     }
 }
