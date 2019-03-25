@@ -1,11 +1,12 @@
-use crate::Bus;
+use super::{worker, Missive};
+use crate::client::Kind;
 use crate::inflight::Inflight;
 use crate::rpc::RpcHandler;
+use crate::Bus;
 use jsonrpc_core::{IoHandler, Params, Result as RpcResult};
-use log::{debug, info};
+use log::{debug, info, trace};
 use rpc_impl_macro::{rpc, rpc_impl_struct};
-use serde_json::json;
-use std::thread::{JoinHandle, spawn};
+use std::thread::{spawn, JoinHandle};
 use uuid::Uuid;
 
 pub struct Server {
@@ -40,8 +41,9 @@ impl Rpc {
 rpc_impl_struct! {
     impl Rpc {
         #[rpc(notification)]
-        pub fn greetings(&self, app: String, kind: crate::client::Kind, name: String, tags: Vec<String>) {
+        pub fn greetings(&self, app: String, kind: Kind, name: String, tags: Vec<String>) {
             info!("received greetings from a {:?} client named \"{}\" with tags: {:?} running {}", kind, name, tags, app);
+            self.bus.send_top(Missive::Hello { app, kind, name, tags });
         }
 
         #[rpc(name = "core.agent.hello")]
@@ -58,7 +60,7 @@ impl Server {
 
         let workws = sender.clone();
         let workbus = bus.clone();
-        let thread = spawn(|| { worker(workws, workbus) });
+        let thread = spawn(|| worker(workws, workbus));
 
         Self {
             bus,
@@ -67,6 +69,12 @@ impl Server {
             rpc,
             sender,
         }
+    }
+}
+
+impl Drop for Server {
+    fn drop(&mut self) {
+        self.bus.send_own(Missive::Exit);
     }
 }
 
@@ -102,16 +110,5 @@ impl ws::Handler for Server {
 
     fn on_shutdown(&mut self) {
         self.rpc_on_shutdown()
-    }
-}
-
-#[derive(Clone)]
-pub enum Missive {
-    Hello
-}
-
-fn worker(ws: ws::Sender, bus: Bus<Missive>) {
-    for missive in bus.iter() {
-        //
     }
 }

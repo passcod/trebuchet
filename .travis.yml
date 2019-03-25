@@ -30,8 +30,6 @@ matrix:
     - env: CARGO_AUDIT=1
 
     # Default test+release versions
-    - os: windows
-      env: TARGET=x86_64-pc-windows-msvc
     - os: osx
       env: TARGET=x86_64-apple-darwin
     - os: linux
@@ -40,36 +38,24 @@ matrix:
     # Extra targets, also released
     - os: linux
       env: TARGET=x86_64-unknown-linux-musl
-    - os: linux
-      env: TARGET=i686-unknown-linux-musl
 
     # Clippy only
     - env: CARGO_CLIPPY=1
 
     # Non-critical, best-effort
-    - os: windows
-      rust: nightly
-      env: TARGET=x86_64-pc-windows-msvc
     - os: linux
       rust: nightly
       env: TARGET=x86_64-unknown-linux-gnu
     - os: osx
       rust: nightly
       env: TARGET=x86_64-apple-darwin
-    - os: windows
-      env: TARGET=x86_64-pc-windows-gnu
 
   allow_failures:
     - rust: nightly
     - env: CARGO_CLIPPY=1
-    - env: TARGET=x86_64-pc-windows-gnu
 
 install:
   - set -e
-  - |
-    if [ $TRAVIS_OS_NAME = windows ]; then
-        choco install windows-sdk-10.0
-    fi
   # --debug for faster build at the minimal expense of runtime speed
   - |
     if [[ ! -z "$CARGO_AUDIT" ]]; then
@@ -106,6 +92,6 @@ deploy:
   file: ${PROJECT_NAME}-${TRAVIS_TAG}-${TARGET}.*
   skip_cleanup: true
   on:
-    repo: passcod/armstrong
+    repo: passcod/trebuchet
     tags: true
     rust: stable

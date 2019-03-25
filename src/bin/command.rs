@@ -1,15 +1,15 @@
 #![forbid(unsafe_code)]
 #![deny(clippy::pedantic)]
 
-use trebuchet::client::{Client, Kind};
 use gethostname::gethostname;
 use std::env;
+use trebuchet::client::{Client, Kind};
 
 fn main() {
     trebuchet::init();
 
     let name = env::var("TREBUCHET_NAME")
-        .or_else(|_| { gethostname().into_string() })
+        .or_else(|_| gethostname().into_string())
         .unwrap_or("anonymous".into());
 
     let tags: Vec<String> = env::var("TREBUCHET_TAGS")
@@ -18,5 +18,6 @@ fn main() {
 
     ws::connect("ws://127.0.0.1:9077", |sender| {
         Client::create(sender, Kind::Command, name.clone(), tags.clone())
-    }).unwrap();
+    })
+    .unwrap();
 }

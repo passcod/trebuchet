@@ -1,15 +1,23 @@
 #![forbid(unsafe_code)]
 #![deny(clippy::pedantic)]
-#![allow(clippy::module_name_repetitions, clippy::or_fun_call, clippy::needless_pass_by_value)]
+#![allow(
+    clippy::module_name_repetitions,
+    clippy::or_fun_call,
+    clippy::needless_pass_by_value
+)]
+
+#[macro_use]
+extern crate diesel;
 
 mod bus;
-pub mod client;
 pub mod castle;
+pub mod client;
+pub mod db;
 mod inflight;
 mod message;
 mod rpc;
 
-pub use crate::bus::{Bus, central};
+pub use crate::bus::{central, Bus};
 
 pub fn init() {
     dotenv::dotenv().unwrap_or_else(|err| log::debug!("No .env file loaded: {:?}", err));

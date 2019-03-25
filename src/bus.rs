@@ -1,76 +1,104 @@
-use crossbeam_channel::{Receiver, Sender, SendError, TrySendError, unbounded};
+use crossbeam_channel::{unbounded, Receiver, Sender, TrySendError};
 use log::{debug, trace};
 use std::collections::HashMap;
-use std::thread::{JoinHandle, spawn};
+use std::fmt::Debug;
+use std::thread::{spawn, JoinHandle};
 use uuid::Uuid;
 
-pub fn central<T: 'static + Clone + Send>() -> (Bus<T>, JoinHandle<()>) {
+pub fn central<T: 'static + Clone + Debug + Send>() -> (Bus<T>, JoinHandle<()>) {
     let (central_tx, central_rx) = unbounded(); // enveloped
 
     let id = Uuid::default();
     let (bus_tx, bus_rx) = unbounded(); // bare
-    let bus = Bus { id: id.clone(), to_central: central_tx, rx: bus_rx };
+    let bus = Bus {
+        id: id.clone(),
+        to_central: central_tx,
+        rx: bus_rx,
+    };
 
-    (bus, spawn(move || {
-        let mut switch: HashMap<Uuid, Sender<T>> = HashMap::new();
-        switch.insert(id, bus_tx);
+    (
+        bus,
+        spawn(move || {
+            let mut switch: HashMap<Uuid, Sender<(Uuid, T)>> = HashMap::new();
+            switch.insert(id, bus_tx);
 
-        for envelope in central_rx.iter() {
-            let mut dead = Vec::new();
-            match envelope {
-                Envelope::Exit => break,
-                Envelope::Broadcast(msg) => {
-                    for (id, tx) in &switch {
-                        if let Err(TrySendError::Disconnected(_)) = tx.try_send(msg.clone()) {
-                            dead.push(id.clone());
+            for envelope in central_rx.iter() {
+                trace!("message on the bus: {:?}", envelope);
+                let mut dead = Vec::new();
+                match envelope {
+                    Envelope::Exit => break,
+                    Envelope::Broadcast { source, content } => {
+                        for (id, tx) in &switch {
+                            if let Err(TrySendError::Disconnected(_)) =
+                                tx.try_send((source, content.clone()))
+                            {
+                                dead.push(id.clone());
+                            }
                         }
                     }
-                },
-                Envelope::Direct { target, content } => {
-                    if let Some(tx) = switch.get(&target) {
-                        if let Err(TrySendError::Disconnected(_)) = tx.try_send(content) {
-                            dead.push(target.clone());
+                    Envelope::Direct {
+                        source,
+                        target,
+                        content,
+                    } => {
+                        if let Some(tx) = switch.get(&target) {
+                            if let Err(TrySendError::Disconnected(_)) =
+                                tx.try_send((source, content))
+                            {
+                                dead.push(target.clone());
+                            }
                         }
                     }
-                },
-                Envelope::Launch { id, tx } => {
-                    switch.insert(id, tx);
-                },
-            }
+                    Envelope::Launch { id, tx } => {
+                        switch.insert(id, tx);
+                    }
+                }
 
-            trace!("burying dead buses: {:?}", dead);
-            for id in &dead {
-                switch.remove(id);
+                if !dead.is_empty() {
+                    trace!("burying dead buses: {:?}", dead);
+                }
+                for id in &dead {
+                    switch.remove(id);
+                }
             }
-        }
-    }))
+        }),
+    )
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Bus<T> {
     /// Unique bus instance id (zero for top level)
     pub id: Uuid,
 
     to_central: Sender<Envelope<T>>,
-    rx: Receiver<T>,
+    rx: Receiver<(Uuid, T)>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Envelope<T> {
     Exit,
-    Broadcast(T),
-    Direct { target: Uuid, content: T },
-    Launch { id: Uuid, tx: Sender<T> },
+    Broadcast {
+        source: Uuid,
+        content: T,
+    },
+    Direct {
+        source: Uuid,
+        target: Uuid,
+        content: T,
+    },
+    Launch {
+        id: Uuid,
+        tx: Sender<(Uuid, T)>,
+    },
 }
 
-impl<T: 'static + Clone + Send> Bus<T> {
+impl<T: 'static + Clone + Debug + Send> Bus<T> {
     pub fn launch(mut self) -> Self {
         let id = Uuid::new_v4();
         debug!("new bus: {}", id);
 
         let (tx, rx) = unbounded();
-        self.to_central.send(Envelope::Launch { id: id.clone(), tx }).ok();
-        // If it errors (disconnected), everything is coming down soon anyway
+        self.send(Envelope::Launch { id: id.clone(), tx });
 
         self.id = id;
         self.rx = rx;
@@ -80,27 +108,47 @@ impl<T: 'static + Clone + Send> Bus<T> {
     /// Shut down the entire bus
     pub fn kill(self) {
         debug!("killing the bus");
-        self.to_central.send(Envelope::Exit).ok();
-        // If it errors, the bus is already dead.
+        self.send(Envelope::Exit);
     }
 
-    pub fn try_send_to(&self, target: &Uuid, msg: T) -> Result<(), TrySendError<Envelope<T>>> {
-        self.to_central.try_send(Envelope::Direct { target: target.clone(), content: msg })
+    fn send(&self, envelope: Envelope<T>) {
+        trace!("sending to central: {:?}", envelope);
+        if let Err(err) = self.to_central.try_send(envelope) {
+            debug!(
+                "error on sending message to bus, likely shutting down? {:?}",
+                err
+            );
+        }
     }
 
-    pub fn send_to(&self, target: &Uuid, msg: T) -> Result<(), SendError<Envelope<T>>> {
-        self.to_central.send(Envelope::Direct { target: target.clone(), content: msg })
+    pub fn send_to(&self, target: &Uuid, msg: T) {
+        self.send(Envelope::Direct {
+            source: self.id.clone(),
+            target: target.clone(),
+            content: msg,
+        })
     }
 
-    pub fn try_broadcast(&self, msg: T) -> Result<(), TrySendError<Envelope<T>>> {
-        self.to_central.try_send(Envelope::Broadcast(msg))
+    pub fn send_top(&self, msg: T) {
+        self.send_to(&Uuid::default(), msg)
     }
 
-    pub fn broadcast(&self, msg: T) -> Result<(), SendError<Envelope<T>>> {
-        self.to_central.send(Envelope::Broadcast(msg))
+    pub fn send_own(&self, msg: T) {
+        self.send_to(&self.id, msg)
+    }
+
+    pub fn broadcast(&self, msg: T) {
+        self.send(Envelope::Broadcast {
+            source: self.id.clone(),
+            content: msg,
+        })
     }
 
     pub fn iter(&self) -> impl Iterator<Item = T> + '_ {
+        self.rx.iter().map(|(_, c)| c)
+    }
+
+    pub fn iter_with_source(&self) -> impl Iterator<Item = (Uuid, T)> + '_ {
         self.rx.iter()
     }
 }

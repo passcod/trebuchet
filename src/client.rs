@@ -82,12 +82,17 @@ impl ws::Handler for Client {
 
         self.notify(
             "greetings",
-            Params::Array(json!([
-                format!("Trebuchet/{}", env!("CARGO_PKG_VERSION")),
-                &self.kind,
-                &self.name,
-                &self.tags,
-            ]).as_array().unwrap().clone()),
+            Params::Array(
+                json!([
+                    format!("Trebuchet/{}", env!("CARGO_PKG_VERSION")),
+                    &self.kind,
+                    &self.name,
+                    &self.tags,
+                ])
+                .as_array()
+                .unwrap()
+                .clone(),
+            ),
             &[],
         )?;
 

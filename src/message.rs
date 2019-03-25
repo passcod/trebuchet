@@ -186,19 +186,24 @@ fn parse_chunks(data: &[u8]) -> Vec<Value> {
         cursor += len;
     }
 
-    chunks.into_iter().map(|c| {
-        let v: Vec<u8> = c.into();
-        v.into()
-    }).collect()
+    chunks
+        .into_iter()
+        .map(|c| {
+            let v: Vec<u8> = c.into();
+            v.into()
+        })
+        .collect()
 }
 
 fn append_params(params: &Params, chunks: Vec<Value>) -> Params {
     match params {
-        Params::None => if chunks.is_empty() {
-            Params::None
-        } else {
-            Params::Array(chunks)
-        },
+        Params::None => {
+            if chunks.is_empty() {
+                Params::None
+            } else {
+                Params::Array(chunks)
+            }
+        }
         Params::Array(arr) => {
             let mut arr = arr.clone();
             arr.extend(chunks);
