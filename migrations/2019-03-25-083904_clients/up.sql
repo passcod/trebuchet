@@ -17,7 +17,7 @@ CREATE FUNCTION update_timestamp() RETURNS trigger AS $$
     END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER clients_update_timestamp
+CREATE TRIGGER update_timestamp
 BEFORE UPDATE
 ON clients
 FOR EACH ROW EXECUTE FUNCTION update_timestamp();
