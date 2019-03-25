@@ -15,7 +15,7 @@ pub mod client;
 pub mod db;
 mod inflight;
 mod message;
-mod rpc;
+pub mod rpc;
 
 pub use crate::bus::{central, Bus};
 

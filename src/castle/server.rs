@@ -1,7 +1,7 @@
 use super::{worker, Missive};
 use crate::client::Kind;
 use crate::inflight::Inflight;
-use crate::rpc::RpcHandler;
+use crate::rpc::{RpcClient, RpcHandler};
 use crate::Bus;
 use jsonrpc_core::{IoHandler, Params, Result as RpcResult};
 use log::{debug, info, trace};
@@ -78,16 +78,18 @@ impl Drop for Server {
     }
 }
 
+impl RpcClient for Server {
+    fn sender(&self) -> ws::Sender {
+        self.sender.clone()
+    }
+
+    fn inflight(&self) -> Inflight {
+        self.inflight.clone()
+    }
+}
+
 impl RpcHandler for Server {
     const PROTOCOL: &'static str = "trebuchet/castle";
-
-    fn sender(&self) -> &ws::Sender {
-        &self.sender
-    }
-
-    fn inflight(&self) -> &Inflight {
-        &self.inflight
-    }
 
     fn rpc(&self) -> &IoHandler {
         &self.rpc

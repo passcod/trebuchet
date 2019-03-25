@@ -3,8 +3,10 @@
 
 use clap::{App, Arg, SubCommand};
 use gethostname::gethostname;
+use jsonrpc_core::Params;
 use std::env;
 use trebuchet::client::{Client, Kind};
+use trebuchet::rpc::RpcClient;
 
 fn main() {
     trebuchet::init();
@@ -79,7 +81,13 @@ fn main() {
         .unwrap_or(Vec::new());
 
     ws::connect(format!("ws://{}:{}", host, port), |sender| {
-        Client::create(sender, Kind::Command, name.clone(), tags.clone())
+        Client::create(sender, Kind::Command, name.clone(), tags.clone()).with_thread(|remote| {
+            remote
+                .call("apps:list", Params::Array(Vec::new()), &[], |res| {
+                    println!("res: {:?}", res);
+                })
+                .expect("failed to send command");
+        })
     })
     .unwrap();
 }

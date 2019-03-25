@@ -1,10 +1,11 @@
 use crate::inflight::Inflight;
-use crate::rpc::RpcHandler;
+use crate::rpc::{RpcClient, RpcHandler, RpcRemote};
 use jsonrpc_core::{IoHandler, Params};
 use log::info;
 use rpc_impl_macro::{rpc, rpc_impl_struct};
 use serde_derive::{Deserialize, Serialize};
 use serde_json::json;
+use std::thread::spawn;
 
 /// Client from Worker to Agent.
 pub struct Client {
@@ -50,18 +51,31 @@ impl Client {
             tags,
         }
     }
+
+    pub fn with_thread<F>(self, body: F) -> Self
+    where
+        F: FnMut(RpcRemote) + Send + 'static,
+    {
+        let remote = self.remote();
+        let mut body = Box::new(body);
+        spawn(move || body(remote));
+
+        self
+    }
+}
+
+impl RpcClient for Client {
+    fn sender(&self) -> ws::Sender {
+        self.sender.clone()
+    }
+
+    fn inflight(&self) -> Inflight {
+        self.inflight.clone()
+    }
 }
 
 impl RpcHandler for Client {
     const PROTOCOL: &'static str = "trebuchet/castle";
-
-    fn sender(&self) -> &ws::Sender {
-        &self.sender
-    }
-
-    fn inflight(&self) -> &Inflight {
-        &self.inflight
-    }
 
     fn rpc(&self) -> &IoHandler {
         &self.rpc

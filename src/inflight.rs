@@ -3,11 +3,14 @@ use crossbeam_channel::{bounded, Receiver, Sender};
 use jsonrpc_core::{Id, Response};
 use log::trace;
 use rpds::HashTrieMap;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{
+    atomic::{AtomicUsize, Ordering},
+    Arc,
+};
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct Inflight {
-    counter: AtomicUsize,
+    counter: Arc<AtomicUsize>,
     store: ArcSwap<HashTrieMap<Id, Sender<Response>>>,
 }
 
