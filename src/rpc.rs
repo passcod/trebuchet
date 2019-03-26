@@ -18,7 +18,7 @@ pub fn app_error(code: i64, message: &str, data: Option<Value>) -> Error {
 #[derive(Clone)]
 pub struct RpcRemote {
     inflight: Inflight,
-    sender: ws::Sender,
+    pub sender: ws::Sender,
 }
 
 impl RpcClient for RpcRemote {
@@ -91,6 +91,10 @@ pub trait RpcClient {
             inflight: self.inflight(),
             sender: self.sender(),
         }
+    }
+
+    fn kill(&self, code: Option<ws::CloseCode>) -> ws::Result<()> {
+        self.sender().close(code.unwrap_or(ws::CloseCode::Normal))
     }
 }
 
