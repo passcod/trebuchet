@@ -4,7 +4,7 @@
 use crate::inflight::Inflight;
 use crate::message;
 use jsonrpc_core::{futures::Future, Error, ErrorCode, IoHandler, Output, Params, Response, Value};
-use log::{debug, trace};
+use log::{debug, error, trace};
 use serde_json::json;
 
 pub fn app_error(code: i64, message: &str, data: Option<Value>) -> Error {
@@ -35,13 +35,10 @@ pub trait RpcClient {
     fn inflight(&self) -> Inflight;
     fn sender(&self) -> ws::Sender;
 
-    fn call(
-        &self,
-        method: &str,
-        params: Params,
-        binary: &[&[u8]],
-        cb: fn(Response),
-    ) -> ws::Result<()> {
+    fn call<F>(&self, method: &str, params: Params, binary: &[&[u8]], mut cb: F) -> ws::Result<()>
+    where
+        F: FnMut(Response) + Send + 'static,
+    {
         debug!("calling method {} with params: {:?}", method, params);
 
         let (id, rx) = self.inflight().launch();
@@ -57,10 +54,20 @@ pub trait RpcClient {
         self.sender().send(msg)?;
 
         trace!("spawn thread for response");
+        let method = method.to_owned();
         std::thread::spawn(move || {
-            let res = rx.recv().expect("Internal comm error");
-            trace!("got response from agent: {:?}", res);
-            cb(res);
+            debug!("response (rpc: {}) thread start", method);
+            cb(match rx.recv() {
+                Err(err) => {
+                    error!("response (rpc: {}) channel error: {:?}", method, err);
+                    Response::from(app_error(64, "channel disconnected", None), None)
+                }
+                Ok(res) => {
+                    trace!("got response from agent: {:?}", res);
+                    res
+                }
+            });
+            debug!("response (rpc: {}) thread end", method);
         });
 
         Ok(())
