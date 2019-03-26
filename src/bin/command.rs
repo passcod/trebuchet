@@ -68,7 +68,28 @@ fn main() {
         )
         .subcommand(SubCommand::with_name("apps:edit").about("reconfigure an app"))
         .subcommand(SubCommand::with_name("apps:create").about("configure a new app"))
-        .subcommand(SubCommand::with_name("releases").about("list releases for an app"))
+        .subcommand(
+            SubCommand::with_name("releases:list")
+                .about("list releases for an app")
+                .visible_alias("releases")
+                .arg(
+                    Arg::with_name("releases:filter")
+                        .value_name("FILTER")
+                        .help("Regexp filter over the release versions")
+                        .takes_value(true),
+                )
+                .arg(
+                    Arg::with_name("releases:status")
+                        .long("status")
+                        .value_name("STATUS")
+                        .help("Show only releases of a particular status")
+                        .takes_value(true)
+                        .possible_values(&["ready", "building", "todo"]),
+                ),
+        )
+        .subcommand(SubCommand::with_name("releases:sync").about("sync releases from source repo"))
+        .subcommand(SubCommand::with_name("releases:build").about("build a specific release"))
+        .subcommand(SubCommand::with_name("releases:rebuild").about("rebuild a release"))
         .get_matches();
 
     let host = args.value_of("host").expect("bad --host option");
