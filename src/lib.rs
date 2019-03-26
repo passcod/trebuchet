@@ -22,6 +22,14 @@ pub mod rpc;
 
 pub use crate::bus::{central, Bus};
 
+lazy_static::lazy_static! {
+    pub static ref HOSTNAME: String = {
+        gethostname::gethostname()
+            .into_string()
+            .unwrap_or("anonymous".into())
+    };
+}
+
 pub fn init() {
     init_with_level(0)
 }
