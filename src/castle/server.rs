@@ -3,10 +3,10 @@ use crate::client::Kind;
 use crate::inflight::Inflight;
 use crate::rpc::{RpcClient, RpcHandler};
 use crate::Bus;
-use jsonrpc_core::{IoHandler, Params, Result as RpcResult};
-use log::{debug, info, trace};
+use jsonrpc_core::{IoHandler, Result as RpcResult};
+use log::{debug, info};
 use rpc_impl_macro::{rpc, rpc_impl_struct};
-use std::thread::{spawn, JoinHandle};
+use std::thread::spawn;
 use uuid::Uuid;
 
 pub struct Server {
@@ -15,9 +15,6 @@ pub struct Server {
 
     /// Castle bus
     bus: Bus<Missive>,
-
-    /// Handler thread for this connection
-    thread: JoinHandle<()>,
 
     /// Requests currently awaiting response
     inflight: Inflight,
@@ -60,11 +57,14 @@ impl Server {
 
         let workws = sender.clone();
         let workbus = bus.clone();
-        let thread = spawn(|| worker(workws, workbus));
+        spawn(move || {
+            debug!("worker thread start {}", workbus.id);
+            worker(workws, workbus.clone());
+            debug!("worker thread end {}", workbus.id);
+        });
 
         Self {
             bus,
-            thread,
             inflight: Inflight::default(),
             rpc,
             sender,

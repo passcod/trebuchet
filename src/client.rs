@@ -1,7 +1,7 @@
 use crate::inflight::Inflight;
 use crate::rpc::{RpcClient, RpcHandler, RpcRemote};
 use jsonrpc_core::{IoHandler, Params};
-use log::info;
+use log::{debug, info};
 use rpc_impl_macro::{rpc, rpc_impl_struct};
 use serde_derive::{Deserialize, Serialize};
 use serde_json::json;
@@ -58,7 +58,11 @@ impl Client {
     {
         let remote = self.remote();
         let mut body = Box::new(body);
-        spawn(move || body(remote));
+        spawn(move || {
+            debug!("client body thread start");
+            body(remote);
+            debug!("client body thread end");
+        });
 
         self
     }

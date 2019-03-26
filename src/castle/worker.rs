@@ -1,11 +1,6 @@
 use crate::client::Kind;
-use crate::inflight::Inflight;
-use crate::rpc::RpcHandler;
 use crate::Bus;
-use jsonrpc_core::{IoHandler, Params, Result as RpcResult};
-use log::{debug, info, trace};
-use std::thread::{spawn, JoinHandle};
-use uuid::Uuid;
+use log::trace;
 
 #[derive(Clone, Debug)]
 pub enum Missive {
@@ -18,9 +13,7 @@ pub enum Missive {
     },
 }
 
-pub fn worker(ws: ws::Sender, bus: Bus<Missive>) {
-    debug!("worker thread start {}", bus.id);
-
+pub fn worker(_ws: ws::Sender, bus: Bus<Missive>) {
     for missive in bus.iter() {
         trace!("received bus message: {:?}", missive);
         match missive {
@@ -31,6 +24,4 @@ pub fn worker(ws: ws::Sender, bus: Bus<Missive>) {
             _ => {}
         }
     }
-
-    debug!("worker thread end {}", bus.id);
 }
