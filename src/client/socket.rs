@@ -1,29 +1,24 @@
+use super::Kind;
 use crate::inflight::Inflight;
 use crate::rpc::{RpcClient, RpcHandler, RpcRemote};
 use jsonrpc_core::{IoHandler, Params};
-use log::{debug, info};
+use log::{debug, error, info};
 use rpc_impl_macro::{rpc, rpc_impl_struct};
-use serde_derive::{Deserialize, Serialize};
 use serde_json::json;
 use std::thread::spawn;
 
 /// Client from Worker to Agent.
-pub struct Client {
+pub struct Client<F>
+where
+    F: FnMut(RpcRemote) + Send + 'static,
+{
     sender: ws::Sender,
     inflight: Inflight,
     rpc: IoHandler,
     kind: Kind,
     name: String,
     tags: Vec<String>,
-}
-
-#[derive(Clone, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
-pub enum Kind {
-    /// Client that can be deployed to
-    Target,
-
-    /// Client that controls ops
-    Command,
+    thread: Option<Box<F>>,
 }
 
 pub struct Rpc;
@@ -37,8 +32,14 @@ rpc_impl_struct! {
     }
 }
 
-impl Client {
-    pub fn create(sender: ws::Sender, kind: Kind, name: String, tags: Vec<String>) -> Self {
+impl<F: FnMut(RpcRemote) + Send + 'static> Client<F> {
+    pub fn create(
+        sender: ws::Sender,
+        kind: Kind,
+        name: String,
+        tags: Vec<String>,
+        thread: F,
+    ) -> Self {
         let mut rpc = IoHandler::new();
         rpc.extend_with(Rpc.to_delegate());
 
@@ -49,26 +50,12 @@ impl Client {
             kind,
             name,
             tags,
+            thread: Some(Box::new(thread)),
         }
-    }
-
-    pub fn with_thread<F>(self, body: F) -> Self
-    where
-        F: FnMut(RpcRemote) + Send + 'static,
-    {
-        let remote = self.remote();
-        let mut body = Box::new(body);
-        spawn(move || {
-            debug!("client body thread start");
-            body(remote);
-            debug!("client body thread end");
-        });
-
-        self
     }
 }
 
-impl RpcClient for Client {
+impl<F: FnMut(RpcRemote) + Send + 'static> RpcClient for Client<F> {
     fn sender(&self) -> ws::Sender {
         self.sender.clone()
     }
@@ -78,7 +65,7 @@ impl RpcClient for Client {
     }
 }
 
-impl RpcHandler for Client {
+impl<F: FnMut(RpcRemote) + Send + 'static> RpcHandler for Client<F> {
     const PROTOCOL: &'static str = "trebuchet/castle";
 
     fn rpc(&self) -> &IoHandler {
@@ -86,7 +73,7 @@ impl RpcHandler for Client {
     }
 }
 
-impl ws::Handler for Client {
+impl<F: FnMut(RpcRemote) + Send + 'static> ws::Handler for Client<F> {
     fn build_request(&mut self, url: &url::Url) -> ws::Result<ws::Request> {
         self.rpc_build_request(url)
     }
@@ -113,6 +100,19 @@ impl ws::Handler for Client {
             ),
             &[],
         )?;
+
+        let remote = self.remote();
+        let mut body = None;
+        std::mem::swap(&mut self.thread, &mut body);
+        spawn(move || {
+            debug!("client body thread start");
+            if let Some(mut body) = body {
+                body(remote);
+            } else {
+                error!("client body swap failed");
+            }
+            debug!("client body thread end");
+        });
 
         Ok(())
     }

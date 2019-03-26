@@ -17,7 +17,7 @@ fn main() {
         .unwrap_or(Vec::new());
 
     ws::connect("ws://127.0.0.1:9077", |sender| {
-        Client::create(sender, Kind::Target, name.clone(), tags.clone())
+        Client::create(sender, Kind::Target, name.clone(), tags.clone(), |_| {})
     })
     .unwrap();
 }
