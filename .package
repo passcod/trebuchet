@@ -42,7 +42,9 @@ cargo build --target $target --release
 ### Decorate
 
 mkdir "$build_dir/$name"
-cp "target/$target/release/$project$ext" "$build_dir/$name/"
+cp "target/$target/release/command$ext" "$build_dir/$name/$project$ext"
+cp "target/$target/release/castle$ext" "$build_dir/$name/$project-castle$ext"
+cp "target/$target/release/target$ext" "$build_dir/$name/$project-target$ext"
 cp LICENSE "$build_dir/$name/"
 ls -shal "$build_dir/$name/"
 
@@ -50,6 +52,8 @@ ls -shal "$build_dir/$name/"
 
 cd "$build_dir"
 strip "$name/$project$ext"
+strip "$name/$project-castle$ext"
+strip "$name/$project-target$ext"
 ls -shal "$name/"
 
 ### Pack
@@ -70,6 +74,8 @@ if [[ "$target" == "x86_64-unknown-linux-gnu" ]]; then
 
     mkdir -p DEBIAN usr/bin
     cp "../../$name/$project" usr/bin/
+    cp "../../$name/$project-castle" usr/bin/
+    cp "../../$name/$project-target" usr/bin/
     cat <<CONTROL > DEBIAN/control
 Package: $project
 Version: ${tag/v/}
@@ -77,7 +83,7 @@ Architecture: amd64
 Maintainer: Félix Saparelli <aur@passcod.name>
 Installed-Size: $(du -d1 usr | tail -n1 | cut -d\t -f1)
 Homepage: https://github.com/passcod/$project
-Description: TODO
+Description: Lightweight deploy tool using Btrfs volumes
  TODO
 CONTROL
 	cd ..

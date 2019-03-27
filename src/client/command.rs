@@ -22,7 +22,8 @@ impl RpcDelegate for Rpc {
 }
 
 pub fn arguments<'a, 'b>() -> App<'a, 'b> {
-    super::arguments()
+    super::arguments("Trebuchet command client")
+        .bin_name("trebuchet")
         .subcommand(
             SubCommand::with_name("apps:list")
                 .about("list all apps")
@@ -35,7 +36,31 @@ pub fn arguments<'a, 'b>() -> App<'a, 'b> {
                 ),
         )
         .subcommand(SubCommand::with_name("apps:edit").about("reconfigure an app"))
-        .subcommand(SubCommand::with_name("apps:create").about("configure a new app"))
+        .subcommand(
+            SubCommand::with_name("apps:create")
+                .about("configure a new app")
+                .arg(
+                    Arg::with_name("build_script")
+                        .long("build-script")
+                        .value_name("SCRIPT")
+                        .help("Custom script to build the app")
+                        .takes_value(true),
+                )
+                .arg(
+                    Arg::with_name("name")
+                        .value_name("NAME")
+                        .help("Name of the app")
+                        .takes_value(true)
+                        .required(true),
+                )
+                .arg(
+                    Arg::with_name("repo")
+                        .value_name("REPO")
+                        .help("Source git repository. Supports `github:user/repo` shorthand")
+                        .takes_value(true)
+                        .required(true),
+                ),
+        )
         .subcommand(
             SubCommand::with_name("releases:list")
                 .about("list releases for an app")
@@ -92,6 +117,23 @@ pub fn handler(remote: RpcRemote, args: ArgMatches) {
             close();
             Ok(())
         })
+    } else if let Some(args) = args.subcommand_matches("apps:create") {
+        let name = Value::String(args.value_of("name").unwrap().into());
+        let repo = Value::String(args.value_of("repo").unwrap().into());
+        let build_script = args
+            .value_of("build_script")
+            .map(|s| Value::String(s.into()))
+            .unwrap_or(json!(null));
+
+        remote.call(
+            "apps:create",
+            param_list(vec![name, repo, build_script]),
+            move |res| {
+                res?;
+                info!("done");
+                Ok(())
+            },
+        )
     } else {
         error!("missing command");
         return close();

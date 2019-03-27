@@ -6,7 +6,7 @@ use log::info;
 use rpc_impl_macro::{rpc, rpc_impl_struct};
 
 pub fn arguments<'a, 'b>() -> App<'a, 'b> {
-    super::arguments()
+    super::arguments("Trebuchet target client").bin_name("trebuchet-target")
 }
 
 pub fn handler(_remote: RpcRemote, _args: ArgMatches) {}

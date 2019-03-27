@@ -5,6 +5,7 @@ license = "Artistic-2.0"
 name = "trebuchet"
 repository = "https://github.com/passcod/trebuchet"
 version = "0.1.0"
+publish = false
 
 [badges]
 

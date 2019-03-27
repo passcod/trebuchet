@@ -1,7 +1,7 @@
 use clap::{App, Arg};
 
-pub fn arguments<'a, 'b>() -> App<'a, 'b> {
-    App::new("Trebuchet command client")
+pub fn arguments<'a, 'b>(name: &str) -> App<'a, 'b> {
+    App::new(name)
         .version(env!("CARGO_PKG_VERSION"))
         .about("Configure, monitor, and deploy apps with Trebuchet")
         .arg(
