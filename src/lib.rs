@@ -1,4 +1,5 @@
 #![forbid(unsafe_code)]
+#![deny(bare_trait_objects)]
 #![deny(clippy::pedantic)]
 #![allow(
     clippy::module_name_repetitions,
