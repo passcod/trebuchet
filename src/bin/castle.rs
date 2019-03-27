@@ -2,16 +2,13 @@
 #![deny(clippy::pedantic)]
 
 use trebuchet::castle;
-use trebuchet::central;
 
 fn main() {
-    trebuchet::init();
-    let (bus, terminal) = central();
-
-    castle::data_service(bus.clone());
+    let args = castle::arguments().get_matches();
+    let (server, bus, terminal) = castle::init(&args);
 
     // Larnach Castle postcode
-    ws::listen("127.0.0.1:9077", |wstx| {
+    ws::listen(server, |wstx| {
         castle::Server::create(castle::Rpc::new(bus.clone()), wstx, bus.clone().launch())
     })
     .unwrap();

@@ -5,6 +5,18 @@ use jsonrpc_macros::IoDelegate;
 use log::info;
 use rpc_impl_macro::{rpc, rpc_impl_struct};
 
+pub struct Rpc;
+
+impl RpcDelegate for Rpc {
+    fn to_delegate<M>(self) -> IoDelegate<Self, M>
+    where
+        M: Metadata,
+        Self: Sized + Send + Sync,
+    {
+        self.to_delegate()
+    }
+}
+
 pub fn arguments<'a, 'b>() -> App<'a, 'b> {
     super::arguments()
         .subcommand(
@@ -47,14 +59,12 @@ pub fn arguments<'a, 'b>() -> App<'a, 'b> {
 pub fn handler(remote: RpcRemote, _args: ArgMatches) {
     let cr = remote.clone();
     remote
-        .call("apps:list", Params::Array(Vec::new()), &[], move |res| {
+        .call("apps:list", Params::None, &[], move |res| {
             info!("res: {:?}", res);
             cr.kill(None).expect("failed to kill socket");
         })
         .expect("failed to send command");
 }
-
-pub struct Rpc;
 
 rpc_impl_struct! {
     impl Rpc {
@@ -62,15 +72,5 @@ rpc_impl_struct! {
         pub fn greetings(&self, app: String) {
             info!("received greetings from {}", app);
         }
-    }
-}
-
-impl RpcDelegate for Rpc {
-    fn to_delegate<M>(self) -> IoDelegate<Self, M>
-    where
-        M: Metadata,
-        Self: Sized + Send + Sync,
-    {
-        self.to_delegate()
     }
 }
