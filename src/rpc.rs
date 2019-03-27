@@ -18,6 +18,14 @@ pub fn app_error(code: i64, message: &str, data: Option<Value>) -> Error {
     }
 }
 
+pub fn param_list(params: Vec<Value>) -> Params {
+    Params::Array(json!(params).as_array().unwrap().to_owned())
+}
+
+pub fn param_map(params: Value) -> Params {
+    Params::Map(params.as_object().unwrap().to_owned())
+}
+
 pub trait RpcDelegate {
     fn to_delegate<M: Metadata>(self) -> IoDelegate<Self, M>
     where

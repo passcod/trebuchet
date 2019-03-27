@@ -1,9 +1,10 @@
-use crate::rpc::{RpcClient, RpcDelegate, RpcRemote};
+use crate::rpc::{param_list, RpcClient, RpcDelegate, RpcRemote};
 use clap::{App, Arg, ArgMatches, SubCommand};
 use jsonrpc_core::{Metadata, Params};
 use jsonrpc_macros::IoDelegate;
 use log::info;
 use rpc_impl_macro::{rpc, rpc_impl_struct};
+use serde_json::json;
 
 pub struct Rpc;
 
@@ -59,10 +60,15 @@ pub fn arguments<'a, 'b>() -> App<'a, 'b> {
 pub fn handler(remote: RpcRemote, _args: ArgMatches) {
     let cr = remote.clone();
     remote
-        .call("apps:list", Params::None, &[], move |res| {
-            info!("res: {:?}", res);
-            cr.kill(None).expect("failed to kill socket");
-        })
+        .call(
+            "apps:list",
+            param_list(vec![json!(null)]),
+            &[],
+            move |res| {
+                info!("res: {:?}", res);
+                cr.kill(None).expect("failed to kill socket");
+            },
+        )
         .expect("failed to send command");
 }
 
