@@ -99,7 +99,10 @@ pub fn handler(remote: RpcRemote, args: ArgMatches) {
             .unwrap_or(json!(null));
 
         remote.call("apps:list", param_list(vec![filter]), move |res| {
-            let apps: Vec<models::App> = from_value(res?)?;
+            let apps: Vec<models::App> = from_value(res.map_err(|err| {
+                close();
+                err
+            })?)?;
 
             if apps.is_empty() {
                 if has_filter {
@@ -129,9 +132,10 @@ pub fn handler(remote: RpcRemote, args: ArgMatches) {
             "apps:create",
             param_list(vec![name, repo, build_script]),
             move |res| {
-                res?;
-                info!("done");
-                Ok(())
+                res.map(|_| info!("done")).map_err(|err| {
+                    close();
+                    err.into()
+                })
             },
         )
     } else {
