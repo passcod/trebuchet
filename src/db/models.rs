@@ -1,6 +1,7 @@
 use super::schema::apps;
 use super::schema::clients;
 use chrono::{DateTime, Utc};
+use serde_derive::{Deserialize, Serialize};
 use uuid::Uuid;
 
 #[derive(Clone, Debug, Queryable)]
@@ -26,7 +27,7 @@ pub struct NewClient {
     pub tags: Vec<String>,
 }
 
-#[derive(Clone, Debug, Queryable)]
+#[derive(Clone, Debug, Deserialize, Queryable, Serialize)]
 pub struct App {
     pub id: i32,
     pub name: String,

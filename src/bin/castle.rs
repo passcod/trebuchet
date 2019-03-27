@@ -12,7 +12,7 @@ fn main() {
 
     // Larnach Castle postcode
     ws::listen("127.0.0.1:9077", |wstx| {
-        castle::Server::new(wstx, bus.clone().launch())
+        castle::Server::create(castle::Rpc::new(bus.clone()), wstx, bus.clone().launch())
     })
     .unwrap();
     bus.kill();
