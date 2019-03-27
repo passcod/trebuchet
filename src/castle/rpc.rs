@@ -1,11 +1,16 @@
-pub use super::Missive;
+use super::{data, Missive};
 use crate::client::Kind;
 use crate::db::models::App;
-use crate::{rpc::RpcDelegate, Bus};
+use crate::{
+    rpc::{app_error, RpcDelegate},
+    Bus,
+};
 use jsonrpc_core::{Metadata, Result as RpcResult};
 use jsonrpc_macros::IoDelegate;
 use log::info;
+use regex::Regex;
 use rpc_impl_macro::{rpc, rpc_impl_struct};
+use serde_json::json;
 
 #[derive(Clone)]
 pub struct Rpc {
@@ -39,7 +44,21 @@ rpc_impl_struct! {
 
         #[rpc(name = "apps:list")]
         pub fn apps_list(&self, filter: Option<String>) -> RpcResult<Vec<App>> {
-            Ok(Vec::new())
+            let filter = if let Some(r) = filter {
+                Some(Regex::new(&r).map_err(|err| app_error(
+                    400,
+                    "filter is not a valid regexp",
+                    Some(json!(err.to_string())))
+                )?)
+            } else {
+                None
+            };
+
+            Ok(if let Some(Missive::AppList(list)) = data::request(&self.bus, data::Topic::AppList { filter })? {
+                list
+            } else {
+                Vec::new()
+            })
         }
     }
 }

@@ -1,5 +1,6 @@
 use crate::bus::{central, Bus};
 use clap::ArgMatches;
+use log::info;
 use std::thread::JoinHandle;
 
 mod args;
@@ -24,5 +25,6 @@ pub fn init(args: &ArgMatches) -> (String, Bus<Missive>, JoinHandle<()>) {
     let (bus, terminal) = central();
     data::data_service(bus.clone());
 
+    info!("Setting up trebuchet on {}", server);
     (server, bus, terminal)
 }

@@ -1,15 +1,31 @@
 use super::Missive;
 use crate::client::Kind;
-use crate::db::models;
-use crate::db::schema;
+use crate::db::{models, schema};
+use crate::rpc::app_error;
 use crate::Bus;
+use crossbeam_channel::bounded;
 use diesel::prelude::*;
-use log::{debug, error, info};
+use jsonrpc_core::Error as RpcError;
+use log::{debug, error, info, trace};
+use regex::Regex;
 
 fn log_only(res: QueryResult<usize>) {
     if let Err(err) = res {
         error!("did not save! {:?}", err);
     }
+}
+
+#[derive(Clone, Debug)]
+pub enum Topic {
+    AppList { filter: Option<Regex> },
+}
+
+pub fn request(bus: &Bus<Missive>, topic: Topic) -> Result<Option<Missive>, RpcError> {
+    let (tx, rx) = bounded(1);
+    trace!("making {:?} request to data service", topic);
+    bus.send_top(Missive::DataRequest { topic, tx });
+    rx.recv()
+        .map_err(|_| app_error(68, "data service channel disconnect", None))
 }
 
 pub fn data_service(bus: Bus<Missive>) {
@@ -25,6 +41,7 @@ pub fn data_service(bus: Bus<Missive>) {
                     name,
                     tags,
                 } => {
+                    trace!("received hello from {}", source);
                     use schema::clients;
 
                     let cli = models::NewClient {
@@ -57,10 +74,28 @@ pub fn data_service(bus: Bus<Missive>) {
                             .execute(&db),
                     )
                 }
+                Missive::DataRequest { topic, tx } => {
+                    trace!("received {:?} request from {}", topic, source);
+                    let data = match topic {
+                        Topic::AppList { filter } => app_list(&db, filter),
+                    };
+
+                    if let Err(err) = tx.send(data) {
+                        error!("failed to send data back to {}: {:?}", source, err);
+                    }
+                }
                 _ => continue,
             }
         }
 
         debug!("data service thread end");
     });
+}
+
+fn app_list(db: &PgConnection, filter: Option<Regex>) -> Option<Missive> {
+    use schema::apps::dsl::*;
+
+    let results = apps.load::<models::App>(db).expect("Error loading apps"); // TODO
+
+    Some(Missive::AppList(results))
 }

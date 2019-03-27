@@ -1,5 +1,7 @@
 use crate::client::Kind;
+use crate::db::models::App;
 use crate::Bus;
+use crossbeam_channel::Sender;
 use log::trace;
 
 #[derive(Clone, Debug)]
@@ -11,6 +13,11 @@ pub enum Missive {
         name: String,
         tags: Vec<String>,
     },
+    DataRequest {
+        topic: super::data::Topic,
+        tx: Sender<Option<Missive>>,
+    },
+    AppList(Vec<App>),
 }
 
 pub fn worker(_ws: ws::Sender, bus: Bus<Missive>) {

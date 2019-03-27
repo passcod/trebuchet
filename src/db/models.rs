@@ -34,7 +34,7 @@ pub struct App {
     pub created: DateTime<Utc>,
     pub updated: DateTime<Utc>,
     pub repo: String,
-    pub build: String,
+    pub build: Option<String>,
 }
 
 #[derive(AsChangeset, Clone, Debug, Insertable)]
