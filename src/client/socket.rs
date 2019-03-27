@@ -1,7 +1,7 @@
 use super::Kind;
 use crate::inflight::Inflight;
-use crate::rpc::{RpcClient, RpcDelegate, RpcHandler, RpcRemote};
-use jsonrpc_core::{IoHandler, Params};
+use crate::rpc::{param_list, RpcClient, RpcDelegate, RpcHandler, RpcRemote};
+use jsonrpc_core::{IoHandler, Value};
 use log::{debug, error, info};
 use serde_json::json;
 use std::thread::spawn;
@@ -79,18 +79,12 @@ impl<F: FnMut(RpcRemote) + Send + 'static> ws::Handler for Client<F> {
 
         self.notify(
             "greetings",
-            Params::Array(
-                json!([
-                    format!("Trebuchet/{}", env!("CARGO_PKG_VERSION")),
-                    &self.kind,
-                    &self.name,
-                    &self.tags,
-                ])
-                .as_array()
-                .unwrap()
-                .clone(),
-            ),
-            &[],
+            param_list(vec![
+                Value::String(format!("Trebuchet/{}", env!("CARGO_PKG_VERSION"))),
+                json!(self.kind),
+                Value::String(self.name.clone()),
+                json!(self.tags),
+            ]),
         )?;
 
         let remote = self.remote();

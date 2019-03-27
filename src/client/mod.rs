@@ -20,7 +20,7 @@ pub enum Kind {
 
 pub fn init(args: &ArgMatches) -> (String, String, Vec<String>) {
     let verbosity = args.occurrences_of("v") as i8 - args.occurrences_of("q") as i8;
-    crate::init_with_level(verbosity);
+    crate::init_with_level(verbosity - 1);
 
     let host = args.value_of("host").expect("bad --host option");
     let port = args.value_of("port").expect("bad --port option");

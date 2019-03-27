@@ -1,14 +1,14 @@
 // Why JSON RPC? Simple, lightweight, well-established, can be hand-written in a pinch
 // Why Websocket? Duplex, inspectable, trivial to secure, can be used from browsers as-is
 
-use crate::inflight::Inflight;
-use crate::message;
+use crate::{inflight::Inflight, message, CommonError};
 use jsonrpc_core::{
     futures::Future, Error, ErrorCode, IoHandler, Metadata, Output, Params, Response, Value,
 };
 use jsonrpc_macros::IoDelegate;
 use log::{debug, error, trace};
 use serde_json::json;
+use std::result::Result as StdResult;
 
 pub fn app_error(code: i64, message: &str, data: Option<Value>) -> Error {
     Error {
@@ -52,7 +52,50 @@ pub trait RpcClient {
     fn inflight(&self) -> Inflight;
     fn sender(&self) -> ws::Sender;
 
-    fn call<F>(&self, method: &str, params: Params, binary: &[&[u8]], mut cb: F) -> ws::Result<()>
+    fn call<F>(&self, method: &str, params: Params, cb: F) -> ws::Result<()>
+    where
+        F: FnMut(Result<Value, Error>) -> StdResult<(), CommonError> + Send + 'static,
+    {
+        self.call_binary(method, params, &[], cb)
+    }
+
+    fn call_binary<F>(
+        &self,
+        method: &str,
+        params: Params,
+        binary: &[&[u8]],
+        mut cb: F,
+    ) -> ws::Result<()>
+    where
+        F: FnMut(Result<Value, Error>) -> StdResult<(), CommonError> + Send + 'static,
+    {
+        self.call_to_response(method, params, binary, move |res| {
+            let outs = match res {
+                Response::Single(one) => vec![one],
+                Response::Batch(many) => {
+                    debug!("got batch response to single request");
+                    many
+                }
+            };
+
+            for out in outs.into_iter() {
+                if let Err(err) = cb(match out {
+                    Output::Success(s) => Ok(s.result),
+                    Output::Failure(s) => Err(s.error),
+                }) {
+                    error!("{:?}", err);
+                }
+            }
+        })
+    }
+
+    fn call_to_response<F>(
+        &self,
+        method: &str,
+        params: Params,
+        binary: &[&[u8]],
+        mut cb: F,
+    ) -> ws::Result<()>
     where
         F: FnMut(Response) + Send + 'static,
     {
@@ -90,7 +133,11 @@ pub trait RpcClient {
         Ok(())
     }
 
-    fn notify(&self, method: &str, params: Params, binary: &[&[u8]]) -> ws::Result<()> {
+    fn notify(&self, method: &str, params: Params) -> ws::Result<()> {
+        self.notify_binary(method, params, &[])
+    }
+
+    fn notify_binary(&self, method: &str, params: Params, binary: &[&[u8]]) -> ws::Result<()> {
         debug!("notifying about {} with params: {:?}", method, params);
 
         let msg: ws::Message = if binary.is_empty() {
