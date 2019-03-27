@@ -5,7 +5,7 @@ table! {
         created -> Timestamptz,
         updated -> Timestamptz,
         repo -> Text,
-        build -> Nullable<Text>,
+        build_script -> Text,
     }
 }
 
@@ -23,4 +23,21 @@ table! {
     }
 }
 
-allow_tables_to_appear_in_same_query!(apps, clients,);
+table! {
+    use diesel::sql_types::*;
+    use crate::db::types::Release_state;
+    releases (id) {
+        id -> Int4,
+        app_id -> Nullable<Int4>,
+        tag -> Text,
+        created -> Timestamptz,
+        updated -> Timestamptz,
+        repo -> Text,
+        build_script -> Text,
+        state -> Release_state,
+    }
+}
+
+joinable!(releases -> apps (app_id));
+
+allow_tables_to_appear_in_same_query!(apps, clients, releases,);

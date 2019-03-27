@@ -1,5 +1,4 @@
-use super::schema::apps;
-use super::schema::clients;
+use super::schema::{apps, clients, releases};
 use chrono::{DateTime, Utc};
 use serde_derive::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -34,7 +33,7 @@ pub struct App {
     pub created: DateTime<Utc>,
     pub updated: DateTime<Utc>,
     pub repo: String,
-    pub build: Option<String>,
+    pub build_script: String,
 }
 
 #[derive(AsChangeset, Clone, Debug, Insertable)]
@@ -42,5 +41,23 @@ pub struct App {
 pub struct NewApp {
     pub name: String,
     pub repo: String,
-    pub build: Option<String>,
+    pub build_script: String,
+}
+
+#[derive(Clone, Debug, Deserialize, Queryable, Serialize)]
+pub struct Release {
+    pub id: i32,
+    pub tag: String,
+    pub created: DateTime<Utc>,
+    pub updated: DateTime<Utc>,
+    pub repo: String,
+    pub build_script: String,
+}
+
+#[derive(AsChangeset, Clone, Debug, Insertable)]
+#[table_name = "releases"]
+pub struct NewRelease {
+    pub tag: String,
+    pub repo: String,
+    pub build_script: String,
 }

@@ -11,7 +11,7 @@
 extern crate diesel;
 
 use log::debug;
-use std::{env, io::Write};
+use std::env;
 
 mod bus;
 pub mod castle;

@@ -1,0 +1,13 @@
+diff --git a/src/db/schema.rs b/src/db/schema.rs
+index 17aefec..b49102d 100644
+--- a/src/db/schema.rs
++++ b/src/db/schema.rs
+@@ -24,6 +24,8 @@ table! {
+ }
+ 
+ table! {
++    use diesel::sql_types::*;
++    use crate::db::types::Release_state;
+     releases (id) {
+         id -> Int4,
+         app_id -> Nullable<Int4>,

@@ -38,6 +38,10 @@ version = "0.4.6"
 features = ["chrono", "postgres", "uuid"]
 version = "1.0.0"
 
+[dependencies.diesel-derive-enum]
+features = ["postgres"]
+version = "0.4.4"
+
 [dependencies.jsonrpc-core]
 git = "https://github.com/paritytech/jsonrpc"
 
