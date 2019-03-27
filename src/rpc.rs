@@ -3,7 +3,10 @@
 
 use crate::inflight::Inflight;
 use crate::message;
-use jsonrpc_core::{futures::Future, Error, ErrorCode, IoHandler, Output, Params, Response, Value};
+use jsonrpc_core::{
+    futures::Future, Error, ErrorCode, IoHandler, Metadata, Output, Params, Response, Value,
+};
+use jsonrpc_macros::IoDelegate;
 use log::{debug, error, trace};
 use serde_json::json;
 
@@ -13,6 +16,12 @@ pub fn app_error(code: i64, message: &str, data: Option<Value>) -> Error {
         message: message.into(),
         data,
     }
+}
+
+pub trait RpcDelegate {
+    fn to_delegate<M: Metadata>(self) -> IoDelegate<Self, M>
+    where
+        Self: Sized + Send + Sync;
 }
 
 #[derive(Clone)]

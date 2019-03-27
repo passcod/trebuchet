@@ -10,6 +10,7 @@ fn main() {
     ws::connect(server, |sender| {
         let args = args.clone();
         Client::create(
+            command::Rpc,
             sender,
             Kind::Command,
             name.clone(),

@@ -4,6 +4,7 @@ use serde_derive::{Deserialize, Serialize};
 mod args;
 pub mod command;
 mod socket;
+pub mod target;
 
 pub use args::arguments;
 pub use socket::Client;

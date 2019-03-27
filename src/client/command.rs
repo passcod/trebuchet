@@ -1,7 +1,9 @@
-use crate::rpc::{RpcClient, RpcRemote};
+use crate::rpc::{RpcClient, RpcDelegate, RpcRemote};
 use clap::{App, Arg, ArgMatches, SubCommand};
-use jsonrpc_core::Params;
+use jsonrpc_core::{Metadata, Params};
+use jsonrpc_macros::IoDelegate;
 use log::info;
+use rpc_impl_macro::{rpc, rpc_impl_struct};
 
 pub fn arguments<'a, 'b>() -> App<'a, 'b> {
     super::arguments()
@@ -50,4 +52,25 @@ pub fn handler(remote: RpcRemote, _args: ArgMatches) {
             cr.kill(None).expect("failed to kill socket");
         })
         .expect("failed to send command");
+}
+
+pub struct Rpc;
+
+rpc_impl_struct! {
+    impl Rpc {
+        #[rpc(notification)]
+        pub fn greetings(&self, app: String) {
+            info!("received greetings from {}", app);
+        }
+    }
+}
+
+impl RpcDelegate for Rpc {
+    fn to_delegate<M>(self) -> IoDelegate<Self, M>
+    where
+        M: Metadata,
+        Self: Sized + Send + Sync,
+    {
+        self.to_delegate()
+    }
 }

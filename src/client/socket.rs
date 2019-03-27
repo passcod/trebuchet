@@ -1,9 +1,8 @@
 use super::Kind;
 use crate::inflight::Inflight;
-use crate::rpc::{RpcClient, RpcHandler, RpcRemote};
+use crate::rpc::{RpcClient, RpcDelegate, RpcHandler, RpcRemote};
 use jsonrpc_core::{IoHandler, Params};
 use log::{debug, error, info};
-use rpc_impl_macro::{rpc, rpc_impl_struct};
 use serde_json::json;
 use std::thread::spawn;
 
@@ -21,27 +20,20 @@ where
     thread: Option<Box<F>>,
 }
 
-pub struct Rpc;
-
-rpc_impl_struct! {
-    impl Rpc {
-        #[rpc(notification)]
-        pub fn greetings(&self, app: String) {
-            info!("received greetings from {}", app);
-        }
-    }
-}
-
 impl<F: FnMut(RpcRemote) + Send + 'static> Client<F> {
-    pub fn create(
+    pub fn create<R>(
+        rpcd: R,
         sender: ws::Sender,
         kind: Kind,
         name: String,
         tags: Vec<String>,
         thread: F,
-    ) -> Self {
+    ) -> Self
+    where
+        R: RpcDelegate + Send + Sync + 'static,
+    {
         let mut rpc = IoHandler::new();
-        rpc.extend_with(Rpc.to_delegate());
+        rpc.extend_with(rpcd.to_delegate());
 
         Self {
             sender,
