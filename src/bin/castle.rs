@@ -9,7 +9,8 @@ fn main() {
 
     // Larnach Castle postcode
     ws::listen(server, |wstx| {
-        castle::Server::create(castle::Rpc::new(bus.clone()), wstx, bus.clone().launch())
+        let bus = bus.clone().launch();
+        castle::Server::create(castle::Rpc::new(bus.clone()), wstx, bus)
     })
     .unwrap();
     bus.kill();
