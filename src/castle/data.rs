@@ -41,7 +41,7 @@ pub fn data_service(bus: Bus<Missive>) {
                     name,
                     tags,
                 } => {
-                    trace!("received hello from {}", source);
+                    info!("received hello from {}", source);
                     use schema::clients;
 
                     let cli = models::NewClient {
@@ -75,7 +75,7 @@ pub fn data_service(bus: Bus<Missive>) {
                     )
                 }
                 Missive::DataRequest { topic, tx } => {
-                    trace!("received {:?} request from {}", topic, source);
+                    info!("received {:?} request from {}", topic, source);
                     let data = match topic {
                         Topic::AppList { filter } => app_list(&db, filter),
                     };
@@ -95,7 +95,14 @@ pub fn data_service(bus: Bus<Missive>) {
 fn app_list(db: &PgConnection, filter: Option<Regex>) -> Option<Missive> {
     use schema::apps::dsl::*;
 
-    let results = apps.load::<models::App>(db).expect("Error loading apps"); // TODO
+    let mut results = apps.load::<models::App>(db).expect("Error loading apps"); // TODO errhanld
+
+    if let Some(re) = filter {
+        results = results
+            .into_iter()
+            .filter(|app| re.is_match(&app.name))
+            .collect();
+    }
 
     Some(Missive::AppList(results))
 }
