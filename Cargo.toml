@@ -3,9 +3,9 @@ authors = ["Félix Saparelli <felix@passcod.name>"]
 edition = "2018"
 license = "Artistic-2.0"
 name = "trebuchet"
+publish = false
 repository = "https://github.com/passcod/trebuchet"
 version = "0.1.0"
-publish = false
 
 [badges]
 
@@ -17,6 +17,7 @@ repository = "passcod/trebuchet"
 
 [dependencies]
 byteorder = "1.2.7"
+chashmap = "2.2.2"
 clap = "2.32.0"
 crossbeam-channel = "0.3.6"
 dotenv = "0.9.0"
