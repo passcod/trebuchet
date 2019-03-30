@@ -41,7 +41,7 @@ pub struct App {
 pub struct NewApp {
     pub name: String,
     pub repo: String,
-    pub build_script: String,
+    pub build_script: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, Queryable, Serialize)]

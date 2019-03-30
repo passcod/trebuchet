@@ -17,6 +17,7 @@ pub enum Missive {
         topic: super::data::Topic,
         tx: Sender<Option<Missive>>,
     },
+    App(App),
     AppList(Vec<App>),
 }
 

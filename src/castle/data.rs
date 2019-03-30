@@ -17,7 +17,14 @@ fn log_only(res: QueryResult<usize>) {
 
 #[derive(Clone, Debug)]
 pub enum Topic {
-    AppList { filter: Option<Regex> },
+    AppList {
+        filter: Option<Regex>,
+    },
+    CreateApp {
+        name: String,
+        repo: String,
+        build_script: Option<String>,
+    },
 }
 
 pub fn request(bus: &Bus<Missive>, topic: Topic) -> Result<Option<Missive>, RpcError> {
@@ -78,6 +85,11 @@ pub fn data_service(bus: Bus<Missive>) {
                     info!("received {:?} request from {}", topic, source);
                     let data = match topic {
                         Topic::AppList { filter } => app_list(&db, filter),
+                        Topic::CreateApp {
+                            name,
+                            repo,
+                            build_script,
+                        } => create_app(&db, name, repo, build_script),
                     };
 
                     if let Err(err) = tx.send(data) {
@@ -105,4 +117,25 @@ fn app_list(db: &PgConnection, filter: Option<Regex>) -> Option<Missive> {
     }
 
     Some(Missive::AppList(results))
+}
+
+fn create_app(
+    db: &PgConnection,
+    name: String,
+    repo: String,
+    build_script: Option<String>,
+) -> Option<Missive> {
+    let new_app = models::NewApp {
+        name,
+        repo,
+        build_script,
+    };
+
+    Some(Missive::App({
+        use schema::apps::dsl::*;
+        diesel::insert_into(apps)
+            .values(&new_app)
+            .get_result(db)
+            .expect("Error saving new app")
+    }))
 }
