@@ -5,7 +5,7 @@ use crate::rpc::app_error;
 use crate::Bus;
 use crossbeam_channel::bounded;
 use diesel::prelude::*;
-use jsonrpc_core::Error as RpcError;
+use jsonrpc_core::{Error as RpcError, Result as RpcResult};
 use log::{debug, error, info, trace};
 use regex::Regex;
 
@@ -27,12 +27,12 @@ pub enum Topic {
     },
 }
 
-pub fn request(bus: &Bus<Missive>, topic: Topic) -> Result<Option<Missive>, RpcError> {
+pub fn request(bus: &Bus<Missive>, topic: Topic) -> RpcResult<Missive> {
     let (tx, rx) = bounded(1);
     trace!("making {:?} request to data service", topic);
     bus.send_top(Missive::DataRequest { topic, tx });
     rx.recv()
-        .map_err(|_| app_error(68, "data service channel disconnect", None))
+        .map_err(|_| app_error(68, "data service channel disconnect", None))?
 }
 
 pub fn data_service(bus: Bus<Missive>) {
@@ -107,10 +107,21 @@ pub fn data_service(bus: Bus<Missive>) {
         .expect("failed to start data service");
 }
 
-fn app_list(db: &PgConnection, filter: Option<Regex>) -> Option<Missive> {
+fn db_error(err: diesel::result::Error) -> RpcError {
+    use serde_json::json;
+    match err {
+        _ => app_error(
+            800,
+            "uncaught database error",
+            Some(json!(format!("{}", err))),
+        ),
+    }
+}
+
+fn app_list(db: &PgConnection, filter: Option<Regex>) -> RpcResult<Missive> {
     use schema::apps::dsl::*;
 
-    let mut results = apps.load::<models::App>(db).expect("Error loading apps"); // TODO errhanld
+    let mut results = apps.load::<models::App>(db).map_err(db_error)?;
 
     if let Some(re) = filter {
         results = results
@@ -119,7 +130,7 @@ fn app_list(db: &PgConnection, filter: Option<Regex>) -> Option<Missive> {
             .collect();
     }
 
-    Some(Missive::AppList(results))
+    Ok(Missive::AppList(results))
 }
 
 fn create_app(
@@ -127,18 +138,18 @@ fn create_app(
     name: String,
     repo: String,
     build_script: Option<String>,
-) -> Option<Missive> {
+) -> RpcResult<Missive> {
     let new_app = models::NewApp {
         name,
         repo,
         build_script,
     };
 
-    Some(Missive::App({
+    Ok(Missive::App({
         use schema::apps::dsl::*;
         diesel::insert_into(apps)
             .values(&new_app)
             .get_result(db)
-            .expect("Error saving new app")
+            .map_err(db_error)?
     }))
 }

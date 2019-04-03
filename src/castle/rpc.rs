@@ -54,7 +54,7 @@ rpc_impl_struct! {
                 None
             };
 
-            Ok(if let Some(Missive::AppList(list)) = data::request(&self.bus, data::Topic::AppList { filter })? {
+            Ok(if let Missive::AppList(list) = data::request(&self.bus, data::Topic::AppList { filter })? {
                 list
             } else {
                 Vec::new()
@@ -63,10 +63,10 @@ rpc_impl_struct! {
 
         #[rpc(name = "apps:create")]
         pub fn apps_create(&self, name: String, repo: String, build_script: Option<String>) -> RpcResult<App> {
-            if let Some(Missive::App(app)) = data::request(&self.bus, data::Topic::CreateApp { name, repo, build_script })? {
+            if let Missive::App(app) = data::request(&self.bus, data::Topic::CreateApp { name, repo, build_script })? {
                 Ok(app)
             } else {
-                Err(app_error(500, "unknown empty error", None))
+                unreachable!()
             }
         }
     }

@@ -2,6 +2,7 @@ use crate::client::Kind;
 use crate::db::models::App;
 use crate::Bus;
 use crossbeam_channel::Sender;
+use jsonrpc_core::Result as RpcResult;
 use log::trace;
 
 #[derive(Clone, Debug)]
@@ -15,7 +16,7 @@ pub enum Missive {
     },
     DataRequest {
         topic: super::data::Topic,
-        tx: Sender<Option<Missive>>,
+        tx: Sender<RpcResult<Missive>>,
     },
     App(App),
     AppList(Vec<App>),
