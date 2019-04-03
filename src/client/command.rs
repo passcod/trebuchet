@@ -132,7 +132,11 @@ pub fn handler(remote: RpcRemote, args: ArgMatches) {
             "apps:create",
             param_list(vec![name, repo, build_script]),
             move |res| {
-                res.map(|_| info!("done")).map_err(|err| {
+                res.map(|_| {
+                    info!("done");
+                    close();
+                })
+                .map_err(|err| {
                     close();
                     err.into()
                 })

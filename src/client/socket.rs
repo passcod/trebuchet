@@ -4,7 +4,7 @@ use crate::rpc::{param_list, RpcClient, RpcDelegate, RpcHandler, RpcRemote};
 use jsonrpc_core::{IoHandler, Value};
 use log::{debug, error, info};
 use serde_json::json;
-use std::thread::spawn;
+use std::thread;
 
 /// Client from Worker to Agent.
 pub struct Client<F>
@@ -90,15 +90,18 @@ impl<F: FnMut(RpcRemote) + Send + 'static> ws::Handler for Client<F> {
         let remote = self.remote();
         let mut body = None;
         std::mem::swap(&mut self.thread, &mut body);
-        spawn(move || {
-            debug!("client body thread start");
-            if let Some(mut body) = body {
-                body(remote);
-            } else {
-                error!("client body swap failed");
-            }
-            debug!("client body thread end");
-        });
+        thread::Builder::new()
+            .name("client body".into())
+            .spawn(move || {
+                debug!("client body thread start");
+                if let Some(mut body) = body {
+                    body(remote);
+                } else {
+                    error!("client body swap failed");
+                }
+                debug!("client body thread end");
+            })
+            .expect("failed to start client body");
 
         Ok(())
     }

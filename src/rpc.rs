@@ -115,20 +115,23 @@ pub trait RpcClient {
 
         trace!("spawn thread for response");
         let method = method.to_owned();
-        std::thread::spawn(move || {
-            debug!("response (rpc: {}) thread start", method);
-            cb(match rx.recv() {
-                Err(err) => {
-                    error!("response (rpc: {}) channel error: {:?}", method, err);
-                    Response::from(app_error(64, "channel disconnected", None), None)
-                }
-                Ok(res) => {
-                    trace!("got response from agent: {:?}", res);
-                    res
-                }
-            });
-            debug!("response (rpc: {}) thread end", method);
-        });
+        std::thread::Builder::new()
+            .name(format!("response for {}", method))
+            .spawn(move || {
+                debug!("response (rpc: {}) thread start", method);
+                cb(match rx.recv() {
+                    Err(err) => {
+                        error!("response (rpc: {}) channel error: {:?}", method, err);
+                        Response::from(app_error(64, "channel disconnected", None), None)
+                    }
+                    Ok(res) => {
+                        trace!("got response from agent: {:?}", res);
+                        res
+                    }
+                });
+                debug!("response (rpc: {}) thread end", method);
+            })
+            .expect("failed to start response thread");
 
         Ok(())
     }

@@ -36,72 +36,75 @@ pub fn request(bus: &Bus<Missive>, topic: Topic) -> Result<Option<Missive>, RpcE
 }
 
 pub fn data_service(bus: Bus<Missive>) {
-    std::thread::spawn(move || {
-        debug!("data service thread start");
-        let db = crate::db::connect();
+    std::thread::Builder::new()
+        .name("data service".into())
+        .spawn(move || {
+            debug!("data service thread start");
+            let db = crate::db::connect();
 
-        for (source, missive) in bus.iter_with_source() {
-            match missive {
-                Missive::Hello {
-                    app,
-                    kind,
-                    name,
-                    tags,
-                } => {
-                    info!("received hello from {}", source);
-                    use schema::clients;
-
-                    let cli = models::NewClient {
-                        connection: source.clone(),
+            for (source, missive) in bus.iter_with_source() {
+                match missive {
+                    Missive::Hello {
                         app,
-                        target: match kind {
-                            Kind::Target => true,
-                            Kind::Command => false,
-                        },
+                        kind,
                         name,
                         tags,
-                    };
+                    } => {
+                        info!("received hello from {}", source);
+                        use schema::clients;
 
-                    log_only(
-                        diesel::insert_into(clients::table)
-                            .values(&cli)
-                            .on_conflict(clients::columns::connection)
-                            .do_update()
-                            .set(&cli)
-                            .execute(&db),
-                    )
-                }
-                Missive::Exit => {
-                    info!("recording client exit {}", source);
-                    use schema::clients;
-                    log_only(
-                        diesel::update(clients::table)
-                            .filter(clients::columns::connection.eq(source))
-                            .set(clients::columns::connected.eq(false))
-                            .execute(&db),
-                    )
-                }
-                Missive::DataRequest { topic, tx } => {
-                    info!("received {:?} request from {}", topic, source);
-                    let data = match topic {
-                        Topic::AppList { filter } => app_list(&db, filter),
-                        Topic::CreateApp {
+                        let cli = models::NewClient {
+                            connection: source.clone(),
+                            app,
+                            target: match kind {
+                                Kind::Target => true,
+                                Kind::Command => false,
+                            },
                             name,
-                            repo,
-                            build_script,
-                        } => create_app(&db, name, repo, build_script),
-                    };
+                            tags,
+                        };
 
-                    if let Err(err) = tx.send(data) {
-                        error!("failed to send data back to {}: {:?}", source, err);
+                        log_only(
+                            diesel::insert_into(clients::table)
+                                .values(&cli)
+                                .on_conflict(clients::columns::connection)
+                                .do_update()
+                                .set(&cli)
+                                .execute(&db),
+                        )
                     }
-                }
-                _ => continue,
-            }
-        }
+                    Missive::Exit => {
+                        info!("recording client exit {}", source);
+                        use schema::clients;
+                        log_only(
+                            diesel::update(clients::table)
+                                .filter(clients::columns::connection.eq(source))
+                                .set(clients::columns::connected.eq(false))
+                                .execute(&db),
+                        )
+                    }
+                    Missive::DataRequest { topic, tx } => {
+                        info!("received {:?} request from {}", topic, source);
+                        let data = match topic {
+                            Topic::AppList { filter } => app_list(&db, filter),
+                            Topic::CreateApp {
+                                name,
+                                repo,
+                                build_script,
+                            } => create_app(&db, name, repo, build_script),
+                        };
 
-        debug!("data service thread end");
-    });
+                        if let Err(err) = tx.send(data) {
+                            error!("failed to send data back to {}: {:?}", source, err);
+                        }
+                    }
+                    _ => continue,
+                }
+            }
+
+            debug!("data service thread end");
+        })
+        .expect("failed to start data service");
 }
 
 fn app_list(db: &PgConnection, filter: Option<Regex>) -> Option<Missive> {

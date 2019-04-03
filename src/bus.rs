@@ -2,7 +2,7 @@ use crossbeam_channel::{unbounded, Receiver, Sender, TrySendError};
 use log::{debug, trace};
 use std::collections::HashMap;
 use std::fmt::Debug;
-use std::thread::{spawn, JoinHandle};
+use std::thread::{Builder, JoinHandle};
 use uuid::Uuid;
 
 pub fn central<T: 'static + Clone + Debug + Send>() -> (Bus<T>, JoinHandle<()>) {
@@ -18,50 +18,53 @@ pub fn central<T: 'static + Clone + Debug + Send>() -> (Bus<T>, JoinHandle<()>) 
 
     (
         bus,
-        spawn(move || {
-            let mut switch: HashMap<Uuid, Sender<(Uuid, T)>> = HashMap::new();
-            switch.insert(id, bus_tx);
+        Builder::new()
+            .name("bus central".into())
+            .spawn(move || {
+                let mut switch: HashMap<Uuid, Sender<(Uuid, T)>> = HashMap::new();
+                switch.insert(id, bus_tx);
 
-            for envelope in central_rx.iter() {
-                trace!("message on the bus: {:?}", envelope);
-                let mut dead = Vec::new();
-                match envelope {
-                    Envelope::Exit => break,
-                    Envelope::Broadcast { source, content } => {
-                        for (id, tx) in &switch {
-                            if let Err(TrySendError::Disconnected(_)) =
-                                tx.try_send((source, content.clone()))
-                            {
-                                dead.push(id.clone());
+                for envelope in central_rx.iter() {
+                    trace!("message on the bus: {:?}", envelope);
+                    let mut dead = Vec::new();
+                    match envelope {
+                        Envelope::Exit => break,
+                        Envelope::Broadcast { source, content } => {
+                            for (id, tx) in &switch {
+                                if let Err(TrySendError::Disconnected(_)) =
+                                    tx.try_send((source, content.clone()))
+                                {
+                                    dead.push(id.clone());
+                                }
                             }
                         }
-                    }
-                    Envelope::Direct {
-                        source,
-                        target,
-                        content,
-                    } => {
-                        if let Some(tx) = switch.get(&target) {
-                            if let Err(TrySendError::Disconnected(_)) =
-                                tx.try_send((source, content))
-                            {
-                                dead.push(target.clone());
+                        Envelope::Direct {
+                            source,
+                            target,
+                            content,
+                        } => {
+                            if let Some(tx) = switch.get(&target) {
+                                if let Err(TrySendError::Disconnected(_)) =
+                                    tx.try_send((source, content))
+                                {
+                                    dead.push(target.clone());
+                                }
                             }
                         }
+                        Envelope::Launch { id, tx } => {
+                            switch.insert(id, tx);
+                        }
                     }
-                    Envelope::Launch { id, tx } => {
-                        switch.insert(id, tx);
-                    }
-                }
 
-                if !dead.is_empty() {
-                    trace!("burying dead buses: {:?}", dead);
+                    if !dead.is_empty() {
+                        trace!("burying dead buses: {:?}", dead);
+                    }
+                    for id in &dead {
+                        switch.remove(id);
+                    }
                 }
-                for id in &dead {
-                    switch.remove(id);
-                }
-            }
-        }),
+            })
+            .expect("failed to start bus central"),
     )
 }
 

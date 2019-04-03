@@ -4,7 +4,7 @@ use crate::rpc::{RpcClient, RpcDelegate, RpcHandler};
 use crate::Bus;
 use jsonrpc_core::IoHandler;
 use log::debug;
-use std::thread::spawn;
+use std::thread;
 
 pub struct Server {
     /// Own websocket end
@@ -30,11 +30,14 @@ impl Server {
 
         let workws = sender.clone();
         let workbus = bus.clone();
-        spawn(move || {
-            debug!("worker thread start {}", workbus.id);
-            worker(workws, workbus.clone());
-            debug!("worker thread end {}", workbus.id);
-        });
+        thread::Builder::new()
+            .name(format!("worker thread {}", bus.id))
+            .spawn(move || {
+                debug!("worker thread start {}", workbus.id);
+                worker(workws, workbus.clone());
+                debug!("worker thread end {}", workbus.id);
+            })
+            .expect("failed to start worker thread");
 
         Self {
             bus,
